@@ -13,18 +13,18 @@ import type { NextRequest } from 'next/server';
  */
 
 const PROTECTED_PATHS = ['/dashboard', '/practice', '/profile', '/achievements', '/leaderboard'];
-const AUTH_PATHS      = ['/login', '/register'];
+const AUTH_PATHS = ['/login', '/register'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check for stored auth token (set by client-side Zustand persist)
   // We use a lightweight presence check — not full JWT verification
-  const tmUserCookie = request.cookies.get('tm-auth-hint')?.value;
-  const isLoggedIn   = !!tmUserCookie;
+  const tmUserCookie = request.cookies.get('accessToken')?.value;
+  const isLoggedIn = !!tmUserCookie;
 
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
-  const isAuthPage  = AUTH_PATHS.some((p) => pathname.startsWith(p));
+  const isAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p));
 
   // Redirect unauthenticated users away from protected routes
   if (isProtected && !isLoggedIn) {
