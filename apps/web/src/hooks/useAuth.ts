@@ -36,6 +36,8 @@ export function useAuth() {
     refreshTimerRef.current = setTimeout(async () => {
       try {
         const newTokens = await authApi.refresh(refreshToken);
+
+        document.cookie = `accessToken=${newTokens.accessToken}; path=/; max-age=${newTokens.expiresIn}; SameSite=Lax; Secure`;
         // Re-fetch user profile with new token
         const profile = await authApi.me(newTokens.accessToken);
         setUser(
@@ -75,6 +77,7 @@ export function useAuth() {
     setLoading(true);
     try {
       const result = await authApi.login({ email, password });
+      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=${result.expiresIn}; SameSite=Lax; Secure`;
       const profile = await authApi.me(result.accessToken);
       setUser(
         {
@@ -97,6 +100,8 @@ export function useAuth() {
     setLoading(true);
     try {
       const result = await authApi.register({ email, username, password });
+
+      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=${result.expiresIn}; SameSite=Lax; Secure`;
       const profile = await authApi.me(result.accessToken);
       setUser(
         {
@@ -117,6 +122,9 @@ export function useAuth() {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     useAnalyticsStore.getState().invalidate();
     storeLogout();
+
+    document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
+
     router.push('/login');
   }, [storeLogout, router]);
 
