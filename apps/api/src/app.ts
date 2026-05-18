@@ -1,14 +1,14 @@
 import express, { Application } from 'express';
-import helmet      from 'helmet';
-import cors        from 'cors';
+import helmet from 'helmet';
+import cors from 'cors';
 import compression from 'compression';
-import { apiRateLimiter }  from './middleware/rateLimiter';
-import { requestLogger }   from './middleware/requestLogger';
-import { errorHandler }    from './middleware/errorHandler';
-import authRouter     from './modules/auth/auth.router';
+import { apiRateLimiter } from './middleware/rateLimiter';
+import { requestLogger } from './middleware/requestLogger';
+import { errorHandler } from './middleware/errorHandler';
+import authRouter from './modules/auth/auth.router';
 import sessionsRouter from './modules/sessions/sessions.router';
 import analyticsRouter from './modules/analytics/analytics.router';
-import lessonsRouter  from './modules/lessons/lessons.router';
+import lessonsRouter from './modules/lessons/lessons.router';
 import { env } from './config/env';
 
 export function createApp(): Application {
@@ -23,11 +23,11 @@ export function createApp(): Application {
   app.use(cors({
     origin: [
       'http://localhost:3000',
-      process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+      process.env.FRONTEND_URL ?? 'http://localhost:3000',
     ],
-    credentials:     true,
-    allowedHeaders:  ['Content-Type', 'Authorization'],
-    exposedHeaders:  ['X-RateLimit-Remaining'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['X-RateLimit-Remaining'],
   }));
 
   // ── Body parsing ──────────────────────────────────────────────────────────
@@ -47,10 +47,10 @@ export function createApp(): Application {
   });
 
   // ── API routes ────────────────────────────────────────────────────────────
-  app.use('/api/auth',      authRouter);
-  app.use('/api/sessions',  sessionsRouter);
+  app.use('/api/auth', authRouter);
+  app.use('/api/sessions', sessionsRouter);
   app.use('/api/analytics', analyticsRouter);
-  app.use('/api/lessons',   lessonsRouter);
+  app.use('/api/lessons', lessonsRouter);
 
   // ── 404 handler ───────────────────────────────────────────────────────────
   app.use((_req, res) => {
