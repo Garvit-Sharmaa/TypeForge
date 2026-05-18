@@ -14,6 +14,8 @@ import { env } from './config/env';
 export function createApp(): Application {
   const app = express();
 
+  app.set('trust proxy', 1);
+
   // ── Security headers ──────────────────────────────────────────────────────
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
