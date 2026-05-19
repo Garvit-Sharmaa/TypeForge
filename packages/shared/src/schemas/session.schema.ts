@@ -5,10 +5,10 @@ import { ANTI_CHEAT } from '../constants/limits';
 export const SessionSubmitSchema = z.object({
   config: z.object({
     mode: z.enum(['time', 'words', 'quote', 'zen']),
-    duration: z.number().int().positive(),
+    duration: z.number().int().min(0),  // 0 is valid in words/lesson mode
     wordCount: z.number().int().positive(),
     language: z.string().min(2).max(20),
-    lessonId: z.string().uuid().optional(),
+    lessonId: z.string().min(1).optional(), // slug like 'lesson-01-home-core', not a UUID
   }),
   results: z.object({
     wpm: z.number().min(0).max(ANTI_CHEAT.MAX_BELIEVABLE_WPM),

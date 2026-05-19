@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useTypingStore, selectResults } from '@/store/typingStore';
 
 interface ResultsPanelProps {
@@ -26,6 +27,7 @@ const StatBlock = ({ label, value, unit }: {
 
 const ResultsPanel = React.memo(function ResultsPanel({ onRestart }: ResultsPanelProps) {
   const results = useTypingStore(selectResults);
+  const router  = useRouter();
   if (!results) return null;
 
   const { wpm, rawWpm, accuracy, correctWords, totalWords, durationMs } = results;
@@ -98,6 +100,7 @@ const ResultsPanel = React.memo(function ResultsPanel({ onRestart }: ResultsPane
         </button>
         <button
           id="view-dashboard-btn"
+          onClick={() => router.push('/dashboard')}
           className="text-muted hover:text-correct transition-colors text-sm underline
                      underline-offset-2"
         >

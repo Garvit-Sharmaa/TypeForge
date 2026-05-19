@@ -291,8 +291,11 @@ export function useTypingEngine(): TypingEngineHandles {
     }, 500);
 
     // 1 s countdown timer (time mode only)
-    if (config.mode === 'time') {
-      timeRemainingRef.current = config.duration;
+    // Read fresh config — startIntervals is called from handleKeyDown which
+    // may close over a stale config snapshot from before the last toggle.
+    const { mode, duration } = useTypingStore.getState().config;
+    if (mode === 'time') {
+      timeRemainingRef.current = duration;
       timerIntervalRef.current = setInterval(() => {
         timeRemainingRef.current -= 1;
         if (timeRemainingRef.current <= 0) {
@@ -301,7 +304,7 @@ export function useTypingEngine(): TypingEngineHandles {
         }
       }, 1000);
     }
-  }, [config.duration, config.mode, finishSession, updateLiveStats]);
+  }, [finishSession, updateLiveStats]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // START NEW SESSION (called on mount + when config changes + restart)
@@ -311,8 +314,20 @@ export function useTypingEngine(): TypingEngineHandles {
     if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-    const newWords = pickWords(config.wordCount);
-    initSession(config, newWords);
+    // ── Bug 3 fix: read the CURRENT config from the store, not the stale closure.
+    // setConfig() writes synchronously to Zustand before startNewSession() is called,
+    // but the useCallback closure still holds the pre-update config snapshot.
+    // getState() always returns the live store value.
+    const liveConfig = useTypingStore.getState().config;
+    const liveWords  = useTypingStore.getState().words;
+
+    // If the store already has a lesson word list (set by the Academy),
+    // reuse it instead of picking random words.
+    const newWords = liveWords.length > 0 && liveConfig.lessonId
+      ? liveWords
+      : pickWords(liveConfig.wordCount);
+
+    initSession(liveConfig, newWords);
 
     // Reset engine state
     engineRef.current = {
@@ -329,7 +344,7 @@ export function useTypingEngine(): TypingEngineHandles {
       keystrokeEvents:   [],
       caretNeedsUpdate:  false,
     };
-    timeRemainingRef.current = config.duration;
+    timeRemainingRef.current = liveConfig.duration;
 
     // Reset all char DOM nodes back to untyped class (after next paint)
     requestAnimationFrame(() => {
@@ -343,7 +358,7 @@ export function useTypingEngine(): TypingEngineHandles {
       updateCaretPosition();
       inputRef.current?.focus();
     });
-  }, [config, initSession, updateCaretPosition]);
+  }, [initSession, updateCaretPosition]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // CORE KEYSTROKE HANDLER — the hot path. Zero Zustand calls here.
