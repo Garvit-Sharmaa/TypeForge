@@ -314,14 +314,41 @@ export function useTypingEngine(): TypingEngineHandles {
     if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-    // ── Bug 2 fix: ALWAYS generate fresh random words for free practice.
-    // Lesson words are loaded by the Academy page via initSession() directly
-    // before navigating to /practice. startNewSession() is the "restart" path
-    // (toggle click, Tab key, Restart button) — it must always use pickWords()
-    // so lesson state never bleeds into a free-practice session.
     const liveConfig = useTypingStore.getState().config;
+    const liveWords  = useTypingStore.getState().words;
 
-    const newWords = pickWords(liveConfig.wordCount);
+    // ── Word selection: STRICT mode branch ───────────────────────────────────
+    //
+    // LESSON MODE  (liveConfig.lessonId is set):
+    //   Use liveWords — the backend-filtered word list already loaded into the
+    //   store by either the Academy page (on first load) or regenerateLesson()
+    //   (on Tab restart). pickWords() draws from the general WORD_LIST and
+    //   must NEVER run here, or the allowedKeys filter is silently bypassed.
+    //
+    // PRACTICE MODE (liveConfig.lessonId is undefined):
+    //   Pick fresh random words from the full English dictionary.
+    //   Toggle handlers (handleModeChange etc.) always call
+    //   setConfig({ lessonId: undefined }) before startNewSession(), so by
+    //   the time we reach this point, any stale lessonId is already cleared.
+    //
+    let newWords: string[];
+    if (liveConfig.lessonId && liveWords.length > 0) {
+      // Lesson mode — reuse the filtered words from the store
+      newWords = liveWords;
+      console.log(
+        '[Engine] startNewSession → LESSON mode',
+        `lessonId="${liveConfig.lessonId}"`,
+        `words[${newWords.length}]:`, newWords.slice(0, 6),
+      );
+    } else {
+      // Practice mode — pick random words
+      newWords = pickWords(liveConfig.wordCount);
+      console.log(
+        '[Engine] startNewSession → PRACTICE mode',
+        `count=${newWords.length}`,
+        'sample:', newWords.slice(0, 6),
+      );
+    }
 
     initSession(liveConfig, newWords);
 
