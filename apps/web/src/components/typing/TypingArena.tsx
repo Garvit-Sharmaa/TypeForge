@@ -199,12 +199,20 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
   // In practice mode, the engine's startNewSession() handles this directly.
   const regenerateLesson = useCallback(async () => {
     if (!lessonId || !tokens?.accessToken) {
-      startNewSession(); // fallback
+      console.warn('[Academy] regenerateLesson: no lessonId or token — falling back to startNewSession');
+      startNewSession();
       return;
     }
     setIsRegenerating(true);
+    console.log('[Academy] Requesting filtered words for lesson:', lessonId);
     try {
       const payload = await lessonsApi.generate(lessonId, tokens.accessToken);
+      console.log('[Academy] Payload received:', {
+        lessonId:    payload.lessonId,
+        wordCount:   payload.wordCount,
+        allowedKeys: payload.config.allowedKeys,
+        sample:      payload.words.slice(0, 6),
+      });
       initSession(
         {
           mode:      'words',
@@ -215,11 +223,12 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
         },
         payload.words,
       );
-      // Tell the engine to re-bind to the new word list and reset DOM/caret
+      console.log('[Academy] initSession called — store now has', payload.words.length, 'filtered words');
+      // startNewSession() will now find lessonId set → reuses liveWords (no pickWords)
       startNewSession();
-    } catch {
-      // Non-fatal: fall back to re-using the current word list
-      startNewSession();
+    } catch (err) {
+      console.error('[Academy] regenerateLesson failed:', err);
+      startNewSession(); // fallback
     } finally {
       setIsRegenerating(false);
     }
