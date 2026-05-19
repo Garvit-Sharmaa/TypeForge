@@ -120,7 +120,9 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     if (!tokens?.accessToken) return;
-    if (lastFetched && Date.now() - lastFetched < 60_000 && dashboard) {
+    // Only serve cached data if lastFetched is set AND within 60s.
+    // invalidate() sets lastFetched=null, so a post-session navigation always re-fetches.
+    if (lastFetched !== null && Date.now() - lastFetched < 60_000 && dashboard) {
       setStats(dashboard.summary as any);
       setWpmHistory(dashboard.last30Days as any);
       return;

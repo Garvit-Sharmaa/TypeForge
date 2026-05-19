@@ -47,13 +47,17 @@ export function useSessionSubmit(): SubmitState {
     lastSubmittedResultsRef.current = results;
     submitStateRef.current = { status: 'submitting', xpGained: 0 };
 
+    // Sanitize lessonId: Zod's min(1) rejects empty strings.
+    // For free-practice sessions the key must be completely absent from the payload.
+    const lessonId = config.lessonId || undefined; // coerce '' | null → undefined
+
     const payload: SessionSubmitPayload = {
       config: {
         mode:      config.mode,
         duration:  config.duration,
         wordCount: config.wordCount,
         language:  config.language,
-        lessonId:  config.lessonId,
+        ...(lessonId ? { lessonId } : {}),   // omit key entirely when falsy
       },
       results: {
         wpm:          results.wpm,
@@ -67,6 +71,7 @@ export function useSessionSubmit(): SubmitState {
       },
       keystrokeEvents: results.keystrokeEvents,
     };
+
 
     sessionsApi.submit(payload, tokens.accessToken)
       .then(({ xpGained, isFlagged, sessionId }) => {

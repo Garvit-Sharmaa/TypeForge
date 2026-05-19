@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore, selectTokens, selectUser } from '@/store/userStore';
@@ -161,14 +161,20 @@ export default function LearnPage() {
   const [startingId,    setStartingId]    = useState<string | null>(null);
   const [error,         setError]         = useState('');
   const [sessionError,  setSessionError]  = useState('');
+  // Bug 4 fix: increment on every mount so lessons are always re-fetched
+  // when navigating back to /learn (e.g. after completing a lesson).
+  const [fetchKey, setFetchKey] = useState(0);
+  useEffect(() => { setFetchKey((k) => k + 1); }, []); // mount-only
 
   // ── Fetch curriculum ──────────────────────────────────────────────────────
   useEffect(() => {
+    setIsLoading(true);
+    setError('');
     lessonsApi.list(tokens?.accessToken)
       .then((data) => setLessons(data.lessons))
       .catch((err) => setError(err.message ?? 'Failed to load lessons'))
       .finally(() => setIsLoading(false));
-  }, [tokens?.accessToken]);
+  }, [tokens?.accessToken, fetchKey]); // re-fetch on every mount + token change
 
   // ── Derive active lesson (first non-locked) ───────────────────────────────
   const activeLessonId = lessons.find((l) => !l.locked)?.id ?? lessons[0]?.id;

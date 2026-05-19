@@ -256,10 +256,14 @@ export function getLessonById(id: string): LessonConfig | null {
 
 /** Return lessons in stage order, with the lesson at `stage` unlocked
  *  if the user has completed the previous lesson.
- *  For simplicity, all lessons up to and including userMaxStage are unlocked. */
+ *
+ *  UNLOCK RULE: completing lesson N (stage N) unlocks lesson N+1.
+ *  So a lesson is locked only when its stage > completedMaxStage + 1.
+ *  Example: user has completed lesson 1 (stage 0) → maxStage=0 → lesson 2
+ *  (stage 1) is unlocked because 1 <= 0+1. Lesson 3 (stage 2) stays locked. */
 export function getLessonsWithLockStatus(userMaxStage: number): Array<LessonConfig & { locked: boolean }> {
   return CURRICULUM.map((lesson) => ({
     ...lesson,
-    locked: (lesson.stage ?? 0) > userMaxStage,
+    locked: (lesson.stage ?? 0) > userMaxStage + 1,
   }));
 }

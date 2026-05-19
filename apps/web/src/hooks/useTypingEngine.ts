@@ -314,18 +314,14 @@ export function useTypingEngine(): TypingEngineHandles {
     if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-    // ── Bug 3 fix: read the CURRENT config from the store, not the stale closure.
-    // setConfig() writes synchronously to Zustand before startNewSession() is called,
-    // but the useCallback closure still holds the pre-update config snapshot.
-    // getState() always returns the live store value.
+    // ── Bug 2 fix: ALWAYS generate fresh random words for free practice.
+    // Lesson words are loaded by the Academy page via initSession() directly
+    // before navigating to /practice. startNewSession() is the "restart" path
+    // (toggle click, Tab key, Restart button) — it must always use pickWords()
+    // so lesson state never bleeds into a free-practice session.
     const liveConfig = useTypingStore.getState().config;
-    const liveWords  = useTypingStore.getState().words;
 
-    // If the store already has a lesson word list (set by the Academy),
-    // reuse it instead of picking random words.
-    const newWords = liveWords.length > 0 && liveConfig.lessonId
-      ? liveWords
-      : pickWords(liveConfig.wordCount);
+    const newWords = pickWords(liveConfig.wordCount);
 
     initSession(liveConfig, newWords);
 
