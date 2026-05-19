@@ -150,17 +150,17 @@ export default function TypingArena() {
   }, [startNewSession]);
 
   const handleModeChange = useCallback((mode: 'time' | 'words') => {
-    setConfig({ mode });
+    setConfig({ mode, lessonId: undefined }); // clear lesson context for free practice
     startNewSession();
   }, [setConfig, startNewSession]);
 
   const handleDurationChange = useCallback((duration: number) => {
-    setConfig({ duration });
+    setConfig({ duration, lessonId: undefined });
     startNewSession();
   }, [setConfig, startNewSession]);
 
   const handleWordCountChange = useCallback((wordCount: number) => {
-    setConfig({ wordCount });
+    setConfig({ wordCount, lessonId: undefined });
     startNewSession();
   }, [setConfig, startNewSession]);
 
