@@ -12,8 +12,25 @@ export async function handleSubmitSession(
   try {
     const userId = req.user!.sub;
 
+    // ── Pre-validation sanitization ───────────────────────────────────────
+    // Zod schema: lessonId is z.string().min(1).optional()
+    // The frontend may send lessonId: "" for free-practice sessions.
+    // An empty string passes the `optional()` check but FAILS `min(1)`.
+    // We must strip the key entirely before Zod sees it.
+    const body = structuredClone(req.body) as Record<string, unknown>;
+    const bodyConfig = body.config as Record<string, unknown> | undefined;
+    if (bodyConfig) {
+      const raw = bodyConfig.lessonId;
+      if (raw === '' || raw === null || raw === undefined) {
+        delete bodyConfig.lessonId;  // absent key passes .optional() cleanly
+      } else if (typeof raw === 'string') {
+        bodyConfig.lessonId = raw.trim() || undefined; // trim whitespace-only slugs
+        if (!bodyConfig.lessonId) delete bodyConfig.lessonId;
+      }
+    }
+
     // ── Schema validation ─────────────────────────────────────────────────
-    const parsed = SubmitSessionSchema.safeParse(req.body);
+    const parsed = SubmitSessionSchema.safeParse(body);
     if (!parsed.success) {
       return next(createError(
         `Validation failed: ${parsed.error.issues.map((i) => i.message).join('; ')}`,

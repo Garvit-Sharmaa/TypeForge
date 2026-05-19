@@ -7,6 +7,10 @@ import { createError }            from '../../middleware/errorHandler';
 import { logger }                 from '../../utils/logger';
 import type { SubmitSessionPayload } from './sessions.validator';
 
+// ── Lesson completion thresholds ──────────────────────────────────────────────
+const LESSON_PASS_ACCURACY = 80;  // % — adjustable
+const LESSON_PASS_WPM      = 10;  // wpm — prevents trivially slow completions
+
 // ── Compact keystroke serialization ───────────────────────────────────────────
 interface CompactKeystroke {
   k: string; e: string; c: 0 | 1; l: number; p: number;
@@ -86,17 +90,21 @@ export async function submitSession(
     await withTransaction(async (client: PoolClient) => {
 
       // 3a. Insert session row
+      // NOTE: lesson_id column is UUID FK referencing the lessons stub table.
+      // Curriculum lesson slugs (e.g. 'lesson-01-home-core') are TEXT identifiers,
+      // not UUIDs, so we pass NULL here and track progression separately in
+      // user_lesson_progress (migration 008) using the slug directly.
       const { rows: sessionRows } = await client.query<{ id: string }>(
         `INSERT INTO typing_sessions
            (user_id, wpm, raw_wpm, accuracy, consistency, duration_ms,
-            mode, language, lesson_id, word_count, correct_words,
+            mode, language, word_count, correct_words,
             correct_chars, total_chars, is_flagged, flag_reason, keystroke_payload)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          RETURNING id`,
         [
           userId, results.wpm, results.rawWpm, results.accuracy,
           consistency, results.durationMs, config.mode, config.language,
-          config.lessonId ?? null, results.totalWords, results.correctWords,
+          results.totalWords, results.correctWords,
           results.correctChars, results.totalChars,
           isFlagged, flagReason ?? null, JSON.stringify(compactPayload),
         ],
@@ -172,6 +180,31 @@ export async function submitSession(
   // ── 4. Dispatch async jobs ────────────────────────────────────────────────
   if (!isFlagged || antiCheatResult.confidence > 0.5) {
     await dispatchSessionJobs(sessionId, userId, results.wpm, results.accuracy);
+  }
+
+  // ── 5. Lesson progression ─────────────────────────────────────────────────
+  // If this was a lesson session that meets the pass threshold, record it
+  // in user_lesson_progress. The lessons API reads from this table to derive
+  // each user's unlock state. Upsert is idempotent — replaying is safe.
+  const lessonSlug = config.lessonId;
+  if (
+    lessonSlug &&
+    !isFlagged &&
+    results.accuracy >= LESSON_PASS_ACCURACY &&
+    results.wpm      >= LESSON_PASS_WPM
+  ) {
+    try {
+      await pool.query(
+        `INSERT INTO user_lesson_progress (user_id, lesson_slug)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id, lesson_slug) DO NOTHING`,
+        [userId, lessonSlug],
+      );
+      logger.info({ userId, lessonSlug }, 'Lesson progress recorded');
+    } catch (progressErr) {
+      // Non-fatal: log and continue — don't fail the whole request
+      logger.warn({ progressErr, lessonSlug }, 'Failed to record lesson progress (non-fatal)');
+    }
   }
 
   logger.info({
