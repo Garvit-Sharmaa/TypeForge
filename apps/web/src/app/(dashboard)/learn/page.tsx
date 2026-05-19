@@ -204,8 +204,10 @@ export default function LearnPage() {
         payload.words,
       );
 
-      // Navigate to the arena — the session is already initialized
-      router.push('/practice');
+      // Navigate to the arena — the session is already initialized.
+      // The ?lessonId= param signals the practice page to enter lesson mode
+      // (hides toggles, shows lesson breadcrumb, enables lesson-aware restart).
+      router.push(`/practice?lessonId=${encodeURIComponent(payload.lessonId)}`);
     } catch (err: any) {
       setSessionError(err.message ?? 'Failed to generate lesson. Please try again.');
     } finally {
