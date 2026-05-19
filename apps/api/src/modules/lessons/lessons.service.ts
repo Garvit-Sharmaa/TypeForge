@@ -60,30 +60,30 @@ async function getUserWeakKeyChars(userId: string): Promise<string[]> {
   }
 }
 
-// ── Derive the user's max completed stage from session history ────────────────
-// A stage is "completed" if the user has at least one non-flagged session
-// for the lesson at that stage.
+// ── Derive the user's max completed stage from lesson progress table ──────────
+// Reads from user_lesson_progress (migration 008) which stores TEXT slugs.
+// This avoids the broken UUID FK on typing_sessions.lesson_id.
 async function getUserMaxStage(userId: string): Promise<number> {
   try {
     const lessonIds = CURRICULUM.map((l) => l.id);
-    const { rows } = await pool.query<{ lesson_id: string }>(
-      `SELECT DISTINCT lesson_id
-         FROM typing_sessions
-        WHERE user_id   = $1
-          AND is_flagged = false
-          AND lesson_id = ANY($2::text[])`,
+    const { rows } = await pool.query<{ lesson_slug: string }>(
+      `SELECT lesson_slug
+         FROM user_lesson_progress
+        WHERE user_id     = $1
+          AND lesson_slug = ANY($2::text[])`,
       [userId, lessonIds],
     );
-    const completedIds = new Set(rows.map((r) => r.lesson_id));
+    const completedSlugs = new Set(rows.map((r) => r.lesson_slug));
     let maxStage = 0;
     for (const lesson of CURRICULUM) {
-      if (completedIds.has(lesson.id)) maxStage = lesson.stage ?? 0;
+      if (completedSlugs.has(lesson.id)) maxStage = lesson.stage ?? 0;
     }
     return maxStage;
   } catch {
     return 0; // default: only lesson 1 unlocked
   }
 }
+
 
 // ── Public service functions ──────────────────────────────────────────────────
 
