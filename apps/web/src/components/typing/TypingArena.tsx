@@ -11,7 +11,8 @@
  *
  * Tree structure:
  *   TypingArena
- *   ├── ConfigBar        (mode selector — renders once, only on config change)
+ *   ├── LessonBreadcrumb (lesson mode only — renders once per session)
+ *   ├── ConfigBar        (practice mode only — renders once, only on config change)
  *   ├── StatsBar         (WPM + ACC — re-renders every 500 ms via selector)
  *   ├── WordDisplay      (word/char grid — renders ONCE, ref-mutated after)
  *   ├── InputCapture     (hidden input — renders once)
@@ -19,21 +20,22 @@
  *   └── ResultsPanel     (overlay — renders once on finish)
  */
 
-'use client';
-
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTypingStore, selectStatus, selectWords, selectLiveStats,
          selectConfig } from '@/store/typingStore';
 import { useTypingEngine } from '@/hooks/useTypingEngine';
 import { useSessionSubmit } from '@/hooks/useSessionSubmit';
 import { useKeyboardBridge } from '@/hooks/useKeyboardBridge';
+import { useUserStore, selectTokens } from '@/store/userStore';
+import { lessonsApi } from '@/lib/api';
 import WordDisplay   from './WordDisplay';
 import InputCapture  from './InputCapture';
 import SessionTimer  from './SessionTimer';
 import ResultsPanel  from './ResultsPanel';
 import { TIME_MODE_OPTIONS, WORDS_MODE_OPTIONS } from '@typing-master/shared';
 
-// ── Live stats bar (subscribes to liveStats slice) ────────────────────────────
+// ── Live stats bar ─────────────────────────────────────────────────────────────
 const StatsBar = React.memo(function StatsBar() {
   const { wpm, accuracy } = useTypingStore(selectLiveStats);
   return (
@@ -50,7 +52,7 @@ const StatsBar = React.memo(function StatsBar() {
   );
 });
 
-// ── Config bar ────────────────────────────────────────────────────────────────
+// ── Config bar (practice mode only) ───────────────────────────────────────────
 const ConfigBar = React.memo(function ConfigBar({
   onModeChange,
   onDurationChange,
@@ -60,8 +62,8 @@ const ConfigBar = React.memo(function ConfigBar({
   onDurationChange:  (s: number)              => void;
   onWordCountChange: (n: number)              => void;
 }) {
-  const config = useTypingStore(selectConfig);
-  const status = useTypingStore(selectStatus);
+  const config   = useTypingStore(selectConfig);
+  const status   = useTypingStore(selectStatus);
   const disabled = status !== 'idle';
 
   return (
@@ -121,15 +123,69 @@ const ConfigBar = React.memo(function ConfigBar({
   );
 });
 
-// ── Main Arena ─────────────────────────────────────────────────────────────────
-export default function TypingArena() {
-  const status  = useTypingStore(selectStatus);
-  const words   = useTypingStore(selectWords);
-  const setConfig = useTypingStore((s) => s.setConfig);
+// ── Lesson breadcrumb (lesson mode only) ──────────────────────────────────────
+const LessonBreadcrumb = React.memo(function LessonBreadcrumb({
+  lessonId,
+  isRegenerating,
+}: {
+  lessonId: string;
+  isRegenerating: boolean;
+}) {
+  const router = useRouter();
+  // Derive a human-readable label from the slug (e.g. 'lesson-01-home-core' → 'Home Core')
+  const label = lessonId
+    .replace(/^lesson-\d+-/, '')   // strip 'lesson-01-'
+    .replace(/-/g, ' ')            // hyphens → spaces
+    .replace(/\b\w/g, (c) => c.toUpperCase()); // title case
 
-  // ── Session submission (fires automatically on status → 'finished') ────────
-  const submitState = useSessionSubmit();
-  // ── Phase 2: keyboard visual bridge ──────────────────────────────────────────
+  return (
+    <div className="flex items-center justify-between w-full">
+      {/* Back link */}
+      <button
+        id="lesson-back-btn"
+        onClick={() => router.push('/learn')}
+        className="text-xs font-mono text-untyped hover:text-muted transition-colors
+                   flex items-center gap-1.5"
+      >
+        ← Academy
+      </button>
+
+      {/* Lesson title */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-mono text-violet-light bg-violet/10
+                         border border-violet/20 px-2 py-0.5 rounded-full">
+          lesson
+        </span>
+        <span className="text-sm font-mono text-correct font-semibold">{label}</span>
+        {isRegenerating && (
+          <span className="text-[10px] font-mono text-untyped animate-pulse">
+            generating…
+          </span>
+        )}
+      </div>
+
+      {/* Spacer to balance the back btn */}
+      <div className="w-16" />
+    </div>
+  );
+});
+
+// ── Main Arena ─────────────────────────────────────────────────────────────────
+export default function TypingArena({ lessonId }: { lessonId?: string }) {
+  const isLesson  = Boolean(lessonId);
+  const status    = useTypingStore(selectStatus);
+  const words     = useTypingStore(selectWords);
+  const config    = useTypingStore(selectConfig);
+  const setConfig = useTypingStore((s) => s.setConfig);
+  const initSession = useTypingStore((s) => s.initSession);
+  const tokens    = useUserStore(selectTokens);
+
+  // Tracks whether we are awaiting a lesson regeneration (Tab restart in lesson mode)
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // ── Session submission (fires automatically on status → 'finished') ─────────
+  useSessionSubmit();
+  // ── Phase 2: keyboard visual bridge ────────────────────────────────────────
   useKeyboardBridge();
 
   const {
@@ -137,20 +193,61 @@ export default function TypingArena() {
     handleWrapperClick, handleKeyDown, startNewSession,
   } = useTypingEngine();
 
+  // ── Lesson-aware restart ──────────────────────────────────────────────────
+  // Bug 1 fix: when in lesson mode, restarting must re-fetch from the backend
+  // so only allowedKeys-filtered words are generated.
+  // In practice mode, the engine's startNewSession() handles this directly.
+  const regenerateLesson = useCallback(async () => {
+    if (!lessonId || !tokens?.accessToken) {
+      startNewSession(); // fallback
+      return;
+    }
+    setIsRegenerating(true);
+    try {
+      const payload = await lessonsApi.generate(lessonId, tokens.accessToken);
+      initSession(
+        {
+          mode:      'words',
+          duration:  0,
+          wordCount: payload.wordCount,
+          language:  'english',
+          lessonId:  payload.lessonId,
+        },
+        payload.words,
+      );
+      // Tell the engine to re-bind to the new word list and reset DOM/caret
+      startNewSession();
+    } catch {
+      // Non-fatal: fall back to re-using the current word list
+      startNewSession();
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [lessonId, tokens, initSession, startNewSession]);
+
+  const handleRestart = useCallback(() => {
+    if (isLesson) {
+      void regenerateLesson();
+    } else {
+      startNewSession();
+    }
+  }, [isLesson, regenerateLesson, startNewSession]);
+
   // Tab key = restart (global shortcut)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Tab') {
         e.preventDefault();
-        startNewSession();
+        handleRestart();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [startNewSession]);
+  }, [handleRestart]);
 
+  // ── Practice mode config handlers ────────────────────────────────────────
   const handleModeChange = useCallback((mode: 'time' | 'words') => {
-    setConfig({ mode, lessonId: undefined }); // clear lesson context for free practice
+    setConfig({ mode, lessonId: undefined });
     startNewSession();
   }, [setConfig, startNewSession]);
 
@@ -169,12 +266,21 @@ export default function TypingArena() {
       id="typing-arena"
       className="flex flex-col items-center gap-8 w-full max-w-3xl mx-auto px-4 py-8"
     >
-      {/* Config row */}
-      <ConfigBar
-        onModeChange={handleModeChange}
-        onDurationChange={handleDurationChange}
-        onWordCountChange={handleWordCountChange}
-      />
+      {/* Bug 2 — conditional header row */}
+      {isLesson ? (
+        // Lesson mode: breadcrumb with back link, no toggles
+        <LessonBreadcrumb
+          lessonId={lessonId!}
+          isRegenerating={isRegenerating}
+        />
+      ) : (
+        // Practice mode: standard config toggles
+        <ConfigBar
+          onModeChange={handleModeChange}
+          onDurationChange={handleDurationChange}
+          onWordCountChange={handleWordCountChange}
+        />
+      )}
 
       {/* Stats + Timer */}
       <div className="flex items-center justify-between w-full">
@@ -202,7 +308,7 @@ export default function TypingArena() {
 
         {/* Results overlay */}
         {status === 'finished' && (
-          <ResultsPanel onRestart={startNewSession} />
+          <ResultsPanel onRestart={handleRestart} />
         )}
       </div>
 
@@ -215,15 +321,15 @@ export default function TypingArena() {
 
       {/* Footer hint */}
       <p className="text-untyped text-xs font-mono">
-        {status === 'idle' && 'start typing to begin · '}
+        {status === 'idle'     && 'start typing to begin · '}
         {status === 'finished' && 'press '}
-        {status !== 'running' && (
+        {status !== 'running'  && (
           <kbd className="bg-surface-2 border border-surface-3 px-1.5 py-0.5 rounded text-muted">
             tab
           </kbd>
         )}
-        {status === 'idle'    && ' to restart'}
-        {status === 'finished'&& ' to restart'}
+        {status === 'idle'     && ' to restart'}
+        {status === 'finished' && ' to restart'}
       </p>
     </div>
   );
