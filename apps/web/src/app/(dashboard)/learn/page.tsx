@@ -28,29 +28,33 @@ function ProgressConnector({ completed }: { completed: boolean }) {
 
 // ── Single lesson card ─────────────────────────────────────────────────────────
 interface LessonCardProps {
-  lesson:     LessonListItem;
-  index:      number;
-  isActive:   boolean;
-  isLoading:  boolean;
-  onStart:    (id: string) => void;
+  lesson:      LessonListItem;
+  index:       number;
+  isActive:    boolean;
+  isCompleted: boolean;    // true when lessonIndex < completedCount (already passed)
+  isLoading:   boolean;
+  onStart:     (id: string) => void;
 }
 
-function LessonCard({ lesson, index, isActive, isLoading, onStart }: LessonCardProps) {
+function LessonCard({ lesson, index, isActive, isCompleted, isLoading, onStart }: LessonCardProps) {
   const diff   = DIFFICULTY_META[lesson.baseDifficulty] ?? DIFFICULTY_META[1];
   const locked = lesson.locked;
-  const done   = !locked && index < /* derived from active stage */0; // overridden below
 
   const statusIcon = locked
     ? '🔒'
     : isActive
       ? '▶'
-      : '✓';
+      : isCompleted
+        ? '✓'
+        : '▶';
 
   const cardBg = locked
     ? 'bg-surface-2/40 border-surface-3/50'
     : isActive
       ? 'bg-violet/8 border-violet/30 shadow-[0_0_20px_rgba(124,58,237,0.12)]'
-      : 'bg-surface-2 border-surface-3 hover:border-surface-2 hover:bg-surface-3/50';
+      : isCompleted
+        ? 'bg-surface-2 border-surface-3 hover:border-surface-2 hover:bg-surface-3/50'
+        : 'bg-surface-2 border-surface-3 hover:border-violet/20 hover:bg-surface-3/30';
 
   return (
     <motion.div
@@ -71,14 +75,14 @@ function LessonCard({ lesson, index, isActive, isLoading, onStart }: LessonCardP
                            : locked
                              ? 'bg-surface-3 border-surface-3 text-untyped'
                              : 'bg-correct/10 border-correct/30 text-correct'}`}>
-          {isActive ? '▶' : locked ? '🔒' : `${lesson.stage + 1}`}
+          {isActive ? '▶' : locked ? '🔒' : isCompleted ? `${lesson.stage + 1}` : '🔒'}
         </div>
 
         <div className="flex-1 min-w-0">
           {/* Title row */}
           <div className="flex items-center gap-3 flex-wrap">
             <h3 className={`font-mono font-semibold text-sm
-              ${locked ? 'text-untyped' : isActive ? 'text-violet-light' : 'text-correct'}`}>
+              ${locked ? 'text-untyped' : isActive ? 'text-violet-light' : isCompleted ? 'text-correct' : 'text-untyped'}`}>
               {lesson.name}
             </h3>
             {/* Difficulty badge */}
@@ -215,8 +219,10 @@ export default function LearnPage() {
     }
   }, [tokens, initSession, router]);
 
-  // ── Compute which lessons are "completed" (all before the active) ─────────
-  const activeIndex = lessons.findIndex((l) => l.id === activeLessonId);
+  // ── Derive active + completed counts ──────────────────────────────────────
+  // activeIndex = index of the first non-locked lesson = number of completed lessons.
+  const activeIndex    = lessons.findIndex((l) => l.id === activeLessonId);
+  const completedCount = activeIndex < 0 ? 0 : activeIndex; // lessons before the active
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4 py-10 animate-fade-in">
@@ -245,7 +251,7 @@ export default function LearnPage() {
               />
             </div>
             <span className="text-xs font-mono text-muted">
-              {activeIndex}/{lessons.length}
+              {completedCount}/{lessons.length}
             </span>
           </div>
         )}
@@ -303,8 +309,9 @@ export default function LearnPage() {
       {!isLoading && !error && (
         <div className="flex flex-col">
           {lessons.map((lesson, i) => {
-            const isLessonActive = lesson.id === activeLessonId;
-            const isThisLoading  = startingId === lesson.id;
+            const isLessonActive  = lesson.id === activeLessonId;
+            const isLessonDone    = i < completedCount;          // everything before active
+            const isThisLoading   = startingId === lesson.id;
 
             return (
               <React.Fragment key={lesson.id}>
@@ -312,11 +319,12 @@ export default function LearnPage() {
                   lesson={lesson}
                   index={i}
                   isActive={isLessonActive}
+                  isCompleted={isLessonDone}
                   isLoading={isThisLoading}
                   onStart={handleStart}
                 />
                 {i < lessons.length - 1 && (
-                  <ProgressConnector completed={i < activeIndex} />
+                  <ProgressConnector completed={i < completedCount} />
                 )}
               </React.Fragment>
             );
