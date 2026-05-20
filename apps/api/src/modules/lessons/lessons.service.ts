@@ -74,13 +74,19 @@ async function getUserMaxStage(userId: string): Promise<number> {
       [userId, lessonIds],
     );
     const completedSlugs = new Set(rows.map((r) => r.lesson_slug));
-    let maxStage = 0;
+    // Sentinel MUST be -1, not 0.
+    // Lesson 1 has stage=0. Starting at 0 makes "nothing done" and "L1 done"
+    // indistinguishable — getLessonsWithLockStatus(0) runs for both cases,
+    // so the L2 lock state never changes after completing L1.
+    // With -1: fresh user → only L1 unlocked (stage 0 > -1+1 is false ✓).
+    // After L1 done: maxStage=0 → L2 unlocked (stage 1 > 0+1 is false ✓).
+    let maxStage = -1;
     for (const lesson of CURRICULUM) {
       if (completedSlugs.has(lesson.id)) maxStage = lesson.stage ?? 0;
     }
     return maxStage;
   } catch {
-    return 0; // default: only lesson 1 unlocked
+    return -1; // default: only lesson 1 unlocked (stage 0 > -1+1 is false)
   }
 }
 
