@@ -54,20 +54,20 @@ export function useSessionSubmit(): SubmitState {
     const payload: SessionSubmitPayload = {
       config: {
         mode:      config.mode,
-        duration:  config.duration,
-        wordCount: config.wordCount,
+        duration:  Math.round(config.duration),
+        wordCount: Math.round(config.wordCount),
         language:  config.language,
         ...(lessonId ? { lessonId } : {}),   // omit key entirely when falsy
       },
       results: {
-        wpm:          results.wpm,
-        rawWpm:       results.rawWpm,
-        accuracy:     results.accuracy,
-        correctWords: results.correctWords,
-        totalWords:   results.totalWords,
-        correctChars: results.correctChars,
-        totalChars:   results.totalChars,
-        durationMs:   results.durationMs,
+        wpm:          Math.round(results.wpm),
+        rawWpm:       Math.round(results.rawWpm),
+        accuracy:     Math.round(results.accuracy),
+        correctWords: results.correctWords,      // already integer (char counter)
+        totalWords:   results.totalWords,        // already integer (char counter)
+        correctChars: results.correctChars,      // already integer (char counter)
+        totalChars:   results.totalChars,        // already integer (char counter)
+        durationMs:   Math.round(results.durationMs), // root cause: high-precision float
       },
       keystrokeEvents: results.keystrokeEvents,
     };

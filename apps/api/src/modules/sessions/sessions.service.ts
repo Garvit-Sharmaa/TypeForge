@@ -102,10 +102,18 @@ export async function submitSession(
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
          RETURNING id`,
         [
-          userId, results.wpm, results.rawWpm, results.accuracy,
-          consistency, results.durationMs, config.mode, config.language,
-          results.totalWords, results.correctWords,
-          results.correctChars, results.totalChars,
+          userId,
+          Math.round(results.wpm),
+          Math.round(results.rawWpm),
+          Math.round(results.accuracy),
+          consistency,
+          Math.round(results.durationMs),   // safety net: DB column is integer
+          config.mode,
+          config.language,
+          results.totalWords,
+          results.correctWords,
+          results.correctChars,
+          results.totalChars,
           isFlagged, flagReason ?? null, JSON.stringify(compactPayload),
         ],
       );
