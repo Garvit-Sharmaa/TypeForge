@@ -180,10 +180,19 @@ export default function LearnPage() {
       .finally(() => setIsLoading(false));
   }, [tokens?.accessToken, fetchKey]); // re-fetch on every mount + token change
 
-  // ── Derive active lesson (first non-locked) ───────────────────────────────
-  const activeLessonId = lessons.find((l) => !l.locked)?.id ?? lessons[0]?.id;
+  // ── Derive active lesson (last non-locked = user's current frontier) ────────
+  // IMPORTANT: completed lessons stay unlocked for practice re-runs.
+  // find()     → always Lesson 1 (first unlocked) — WRONG ✗
+  // findLast() → the furthest unlocked lesson = the true "next up" — CORRECT ✓
+  const activeLessonId = [...lessons].reverse().find((l) => !l.locked)?.id
+                         ?? lessons[0]?.id;
 
-  // ── Start a lesson ────────────────────────────────────────────────────────
+  // ── Derive active + completed counts ──────────────────────────────────────
+  // All lessons *before* the active frontier are completed.
+  // If all lessons are unlocked (user finished the curriculum), activeIndex
+  // will be the last lesson (index 9) and completedCount = 9 (or lessons.length).
+  const activeIndex    = lessons.findIndex((l) => l.id === activeLessonId);
+  const completedCount = activeIndex < 0 ? 0 : activeIndex; // lessons before the active
   const handleStart = useCallback(async (lessonId: string) => {
     if (!tokens?.accessToken) {
       router.push('/login');
@@ -219,10 +228,6 @@ export default function LearnPage() {
     }
   }, [tokens, initSession, router]);
 
-  // ── Derive active + completed counts ──────────────────────────────────────
-  // activeIndex = index of the first non-locked lesson = number of completed lessons.
-  const activeIndex    = lessons.findIndex((l) => l.id === activeLessonId);
-  const completedCount = activeIndex < 0 ? 0 : activeIndex; // lessons before the active
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4 py-10 animate-fade-in">
