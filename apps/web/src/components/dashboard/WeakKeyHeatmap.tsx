@@ -193,12 +193,22 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
+    // Expand each key's hit area by half the gap so the 5px gaps between keys
+    // don't fire the "no key found" branch and flicker the tooltip off.
+    const HIT_EXPAND = KEY_GAP / 2;
+
     for (const key of KEY_RECTS) {
-      if (mx >= key.x && mx <= key.x + key.w && my >= key.y && my <= key.y + key.h) {
+      if (
+        mx >= key.x - HIT_EXPAND && mx <= key.x + key.w + HIT_EXPAND &&
+        my >= key.y - HIT_EXPAND && my <= key.y + key.h + HIT_EXPAND
+      ) {
         const kd = dataMap.get(key.char);
+        // Clamp tooltip X so it never overflows the canvas container.
+        const TOOLTIP_W  = 140;
+        const clampedX   = Math.min(e.clientX - rect.left + 12, CANVAS_W - TOOLTIP_W);
         setTooltip({
           visible: true,
-          x: e.clientX - rect.left + 12,
+          x: clampedX,
           y: e.clientY - rect.top  - 10,
           key: key.char === ' ' ? 'Space' : key.char.toUpperCase(),
           errorRate:    kd?.errorRate    ?? 0,
@@ -237,12 +247,12 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
           <div className="flex flex-col gap-0.5 text-muted">
             <span>
               Error rate:{' '}
-              <span className={tooltip.errorRate > 0.1 ? 'text-incorrect' : 'text-warning'}>
+              <span style={{ color: tooltip.errorRate > 0.1 ? '#f87171' : '#fbbf24' }}>
                 {(tooltip.errorRate * 100).toFixed(1)}%
               </span>
             </span>
             <span>Avg latency: <span className="text-violet-light">{Math.round(tooltip.avgLatencyMs)}ms</span></span>
-            <span>Samples: {tooltip.sampleCount}</span>
+            <span>Samples: <span className="text-correct">{tooltip.sampleCount}</span></span>
           </div>
         </div>
       )}
