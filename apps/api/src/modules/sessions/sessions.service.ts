@@ -194,12 +194,30 @@ export async function submitSession(
   // If this was a lesson session that meets the pass threshold, record it
   // in user_lesson_progress. The lessons API reads from this table to derive
   // each user's unlock state. Upsert is idempotent — replaying is safe.
+  //
+  // THRESHOLD NOTE:
+  //   We use results.rawWpm (totalChars / 5 / elapsedMin) NOT results.wpm
+  //   (correctWords / elapsedMin). On longer-word lessons (4+), beginners
+  //   often correct mistakes mid-word, which resets word-level correctness and
+  //   collapses wpm to near-zero even at a reasonable typing speed. rawWpm is
+  //   the standard character-throughput metric and is unaffected by
+  //   mid-word corrections — the accuracy gate already penalises errors.
   const lessonSlug = config.lessonId;
+  logger.info({
+    userId, lessonSlug,
+    wpm:      results.wpm,
+    rawWpm:   results.rawWpm,
+    accuracy: results.accuracy,
+    passAccuracy: LESSON_PASS_ACCURACY,
+    passWpm:      LESSON_PASS_WPM,
+    isFlagged,
+  }, 'Lesson progression gate check');
+
   if (
     lessonSlug &&
     !isFlagged &&
     results.accuracy >= LESSON_PASS_ACCURACY &&
-    results.wpm      >= LESSON_PASS_WPM
+    results.rawWpm   >= LESSON_PASS_WPM
   ) {
     try {
       await pool.query(
