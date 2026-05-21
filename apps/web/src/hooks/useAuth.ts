@@ -120,8 +120,13 @@ export function useAuth() {
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    useAnalyticsStore.getState().invalidate();
-    storeLogout();
+
+    // Wipe ALL in-memory derived state so no previous user's data is
+    // visible even for a single render cycle after logout.
+    // userStore.logout() also calls persist.clearStorage() to wipe localStorage.
+    useAnalyticsStore.getState().invalidate();       // clears dashboard cache
+    useAnalyticsStore.getState().setWeakKeys([]);    // clears weak-key heatmap
+    storeLogout();                                   // clears user + tokens + localStorage
 
     document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
 

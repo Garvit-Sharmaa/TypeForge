@@ -155,9 +155,10 @@ function LessonCard({ lesson, index, isActive, isCompleted, isLoading, onStart }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function LearnPage() {
-  const router    = useRouter();
-  const tokens    = useUserStore(selectTokens);
-  const user      = useUserStore(selectUser);
+  const router      = useRouter();
+  const tokens      = useUserStore(selectTokens);
+  const user        = useUserStore(selectUser);
+  const isHydrated  = useUserStore((s) => s.isHydrated);
   const initSession = useTypingStore((s) => s.initSession);
 
   const [lessons,       setLessons]       = useState<LessonListItem[]>([]);
@@ -172,13 +173,32 @@ export default function LearnPage() {
 
   // ── Fetch curriculum ──────────────────────────────────────────────────────
   useEffect(() => {
+    // ISOLATION GUARD: do not fetch until the Zustand persist middleware has
+    // finished hydrating from localStorage. Without this check, the effect
+    // can fire during the brief window where the store still holds the
+    // previous user's token, causing their lesson unlock state to flash
+    // on screen for the new user.
+    if (!isHydrated) return;
+
     setIsLoading(true);
     setError('');
     lessonsApi.list(tokens?.accessToken)
       .then((data) => setLessons(data.lessons))
       .catch((err) => setError(err.message ?? 'Failed to load lessons'))
       .finally(() => setIsLoading(false));
-  }, [tokens?.accessToken, fetchKey]); // re-fetch on every mount + token change
+  }, [tokens?.accessToken, fetchKey, isHydrated]); // re-fetch on every mount + token change
+
+  // ── Clear stale lesson list when a different user logs in on the same tab ──
+  // Without this, User A's locked/unlocked state briefly renders under User B's
+  // name during the gap between login and the fresh fetch resolving.
+  const prevUserIdRef = React.useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = user?.id ?? null;
+    if (prevUserIdRef.current !== null && prevUserIdRef.current !== currentId) {
+      setLessons([]);  // clear stale previous-user lesson list immediately
+    }
+    prevUserIdRef.current = currentId;
+  }, [user?.id]);
 
   // ── Derive active lesson (last non-locked = user's current frontier) ────────
   // IMPORTANT: completed lessons stay unlocked for practice re-runs.
