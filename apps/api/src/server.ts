@@ -2,37 +2,40 @@
  * server.ts — Entry point for the Node.js API.
  *
  * ═══════════════════════════════════════════════════════════════
- *  MIGRATION STATUS: PHASE 4 COMPLETE — All four phases done.
+ *  MIGRATION STATUS: PHASE 5 COMPLETE — BullMQ fully silenced.
  *
- *  Post-migration startup sequence:
+ *  Final startup sequence:
  *    1. Validate env (crash fast on bad config)
  *    2. Connect to PostgreSQL
- *    3. Connect to Redis (still required for archival BullMQ cron)
- *    4. Start archival BullMQ worker + schedule nightly cron
- *    5. Start HTTP server (webhook endpoint live at /api/webhooks)
- *    6. Graceful shutdown
+ *    3. Start HTTP server (QStash webhook live at /api/webhooks)
+ *    4. Graceful shutdown
  *
- *  Session worker fate (analytics / achievements / streaks):
- *    Removed from this boot sequence. They are now stateless pure
- *    functions in their respective worker files, invoked on-demand
- *    by the QStash God Handler at POST /api/webhooks/process-session.
- *    No polling, no idle Redis connections for session jobs.
+ *  Zero Redis connections. Zero BullMQ workers.
+ *  All background jobs are now push-driven via Upstash QStash:
+ *    POST /api/webhooks/process-session  →  God Handler fan-out
  *
- *  What still uses BullMQ / Redis:
- *    - archivalWorker: nightly keystroke-payload archival cron (02:00 UTC)
- *    - Redis is kept alive solely for this purpose.
- *    - If archival is later migrated to a cron-as-a-service (e.g. QStash
- *      scheduled messages), Redis and BullMQ can be removed entirely.
+ *  The archival cron (keystroke payload cleanup) is the one remaining
+ *  TODO — migrate it to a QStash Scheduled Message or Vercel Cron
+ *  to eliminate Redis + BullMQ dependencies entirely:
+ *    QStash scheduled:  client.schedules.create({ destination, cron })
+ *    Vercel Cron:       vercel.json "crons" + a /api/cron/archival route
  * ═══════════════════════════════════════════════════════════════
  */
 
 import { env }                    from './config/env';
 import { checkDatabaseConnection } from './config/database';
-import { checkRedisConnection }   from './config/redis';
-import { archivalQueue }          from './config/bullmq';
 import { createApp }              from './app';
 import { logger }                 from './utils/logger';
+
+/* === BACKUP: OLD BULLMQ — archival worker silenced in Phase 5 ===============
+   Redis is no longer checked on boot. The archival cron is disabled.
+   To re-enable: uncomment these imports + the boot block below, then
+   also re-enable the Queue instances in bullmq.ts (COMPATIBILITY SHIM).
+
+import { checkRedisConnection }   from './config/redis';
+import { archivalQueue }          from './config/bullmq';
 import { startArchivalWorker }    from './workers/archivalWorker';
+=== END BACKUP ================================================================ */
 
 /* === BACKUP: OLD BULLMQ — session workers removed in Phase 2 ================
    These are now stateless pure functions called by the QStash God Handler.
@@ -50,16 +53,16 @@ async function bootstrap(): Promise<void> {
   // ── 1. PostgreSQL ──────────────────────────────────────────────────────────
   await checkDatabaseConnection();
 
-  // ── 2. Redis (required for archival BullMQ cron only) ────────────────────
-  // Session job workers (analytics / achievements / streaks) no longer poll
-  // Redis — they are invoked directly by the QStash webhook. Redis stays alive
-  // exclusively for the nightly archival scheduled job below.
+  /* === BACKUP: OLD BULLMQ — Redis + archival cron silenced in Phase 5 ========
+     The archival worker (nightly keystroke payload cleanup) was the last
+     BullMQ consumer. It is now disabled — no Redis connection is opened.
+     TODO: migrate to QStash Scheduled Message or Vercel Cron before
+           re-enabling keystroke archival in a zero-Redis architecture.
+
+  // ── 2. Redis (required for archival BullMQ cron only) ──────────────────
   await checkRedisConnection();
 
-  // ── 3. Archival worker + nightly cron ────────────────────────────────────
-  // This is the ONLY BullMQ worker still active after the QStash migration.
-  // It nulls out keystroke_payload on sessions older than 30 days to keep
-  // the typing_sessions table lean (data already aggregated into weak_keys).
+  // ── 3. Archival worker + nightly cron ──────────────────────────────────
   startArchivalWorker();
 
   await archivalQueue.add(
@@ -67,9 +70,10 @@ async function bootstrap(): Promise<void> {
     { olderThanDays: 30 },
     {
       repeat: { pattern: '0 2 * * *' }, // 02:00 UTC every night
-      jobId:  'nightly-archival-singleton', // idempotent — no duplicate jobs
+      jobId:  'nightly-archival-singleton',
     },
   );
+  === END BACKUP ============================================================== */
 
   /* === BACKUP: OLD BULLMQ — session workers no longer started here ==========
   startAnalyticsWorker();

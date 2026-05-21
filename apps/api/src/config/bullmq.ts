@@ -2,38 +2,40 @@
  * bullmq.ts — Job dispatch layer.
  *
  * ═══════════════════════════════════════════════════════════════
- *  MIGRATION STATUS: PHASE 1 COMPLETE — Producer rewritten.
+ *  MIGRATION STATUS: PHASE 5 COMPLETE — BullMQ fully silenced.
  *
- *  Transport:  BullMQ (Redis pull-queue)  →  Upstash QStash (push webhook)
- *  Strategy:   Strangler Fig — old code commented out, NOT deleted.
- *  Pattern:    3 separate queues  →  1 single "God Handler" webhook
- *              POST ${PUBLIC_API_URL}/api/webhooks/process-session
+ *  This file now contains ONLY:
+ *    1. dispatchSessionJobs() — QStash push producer (active)
+ *    2. SessionWebhookPayload interface — producer/consumer contract
+ *    3. QUEUES const + payload interfaces — kept for archivalWorker.ts import
+ *       compatibility (file compiles but startArchivalWorker is disabled)
+ *    4. BACKUP blocks for every removed BullMQ component
  *
- *  Remaining phases:
- *    Phase 2 — Refactor workers to pure functions (remove BullMQ Job wrapper)
- *    Phase 3 — Create the /api/webhooks/process-session Express handler
- *    Phase 4 — Clean up server.ts boot sequence
+ *  Zero Redis connections opened by this module.
  * ═══════════════════════════════════════════════════════════════
  */
 
 import { Client }  from '@upstash/qstash';
-// BullMQ Queue still needed for archivalQueue (cron job — not migrated to QStash).
-// Also keeps the old session workers compiling until Phase 2 removes them.
-import { Queue }   from 'bullmq';
-import { redis }   from './redis';
 import { env }     from './env';
 import { logger }  from '../utils/logger';
 
+/* === BACKUP: OLD BULLMQ — Queue instances silenced in Phase 5 ===============
+   These imports were only needed to instantiate the four Queue objects below.
+   Removing them kills the four persistent Redis connections that were
+   showing up as 'bull:archival', 'bull:analytics', etc. in Upstash monitor.
+   To revert: uncomment these two lines + the Queue instances block below.
+
+import { Queue }   from 'bullmq';
+import { redis }   from './redis';
+=== END BACKUP ================================================================ */
+
 // ════════════════════════════════════════════════════════════════════════════
-// COMPATIBILITY SHIM — temporary bridge for the Strangler Fig transition.
+// COMPATIBILITY SHIM — import boundary for archivalWorker.ts.
 //
-// The archivalWorker (scheduled cron, NOT migrated) and the old session
-// workers (removed in Phase 2) still import QUEUES, archivalQueue, and the
-// payload types from this module. These exports keep every file compiling
-// cleanly at each phase boundary.
-//
-// CLEANUP: once Phase 2 + Phase 4 are complete, delete this entire section
-// along with the `import { Queue } from 'bullmq'` and `import { redis }` above.
+// archivalWorker.ts still imports QUEUES and ArchivalJobPayload from this
+// module. Those imports must remain live so the file compiles cleanly even
+// though startArchivalWorker() is now disabled. If archivalWorker.ts is
+// eventually deleted, this entire shim can be removed too.
 // ════════════════════════════════════════════════════════════════════════════
 
 export const QUEUES = {
@@ -43,15 +45,20 @@ export const QUEUES = {
   ARCHIVAL:     'archival',
 } as const;
 
-// Type-only re-exports — the old workers import these; no runtime cost.
+// Type-only re-exports — zero runtime cost.
 export interface AnalyticsJobPayload    { sessionId: string; userId: string; }
 export interface AchievementJobPayload  { userId: string; sessionId: string; wpm: number; accuracy: number; }
 export interface StreakJobPayload        { userId: string; }
 export interface ArchivalJobPayload     { olderThanDays: number; }
 
-// archivalQueue: kept live — it drives the nightly keystroke archival cron.
-// The three session queues are instantiated but no longer used by the new
-// dispatchSessionJobs — they exist only so old imports don't break.
+/* === BACKUP: OLD BULLMQ — Queue instances silenced in Phase 5 ===============
+   Each `new Queue(...)` call opens a persistent Redis connection that BullMQ
+   uses for polling (BRPOP). All four appeared in Upstash Redis monitor.
+   The four session queues were already unused; archivalQueue was the last
+   active one — silenced here as the final step of the migration.
+   To revert: uncomment the opts block + all four Queue lines,
+   then also restore the `import { Queue }` and `import { redis }` above.
+
 const _defaultQueueOpts = {
   connection: redis,
   defaultJobOptions: {
@@ -65,6 +72,7 @@ export const analyticsQueue    = new Queue(QUEUES.ANALYTICS,    _defaultQueueOpt
 export const achievementsQueue = new Queue(QUEUES.ACHIEVEMENTS,  _defaultQueueOpts);
 export const streaksQueue      = new Queue(QUEUES.STREAKS,       _defaultQueueOpts);
 export const archivalQueue     = new Queue(QUEUES.ARCHIVAL,      _defaultQueueOpts);
+=== END BACKUP ================================================================ */
 
 // ── END COMPATIBILITY SHIM ───────────────────────────────────────────────────
 
