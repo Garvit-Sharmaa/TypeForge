@@ -33,6 +33,7 @@ import WordDisplay   from './WordDisplay';
 import InputCapture  from './InputCapture';
 import SessionTimer  from './SessionTimer';
 import ResultsPanel  from './ResultsPanel';
+import LiveKeyboard  from './LiveKeyboard';
 import { TIME_MODE_OPTIONS, WORDS_MODE_OPTIONS } from '@typing-master/shared';
 
 // ── Live stats bar ─────────────────────────────────────────────────────────────
@@ -183,6 +184,34 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
   // Tracks whether we are awaiting a lesson regeneration (Tab restart in lesson mode)
   const [isRegenerating, setIsRegenerating] = useState(false);
 
+  // ── Ghost Keyboard: track the physical key currently held down ─────────────
+  // This state updates on every keydown/keyup. It is LOCAL — it does NOT go
+  // into Zustand. React batches the setState so it never blocks the typing engine.
+  // We deliberately skip e.repeat so held keys don't re-fire the flash.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Skip auto-repeat (key held) — we only want the initial press flash
+      if (e.repeat) return;
+      // Tab is handled by the restart listener below; skip it here to avoid
+      // `activeKey = 'tab'` flickering during a restart.
+      if (e.key === 'Tab') return;
+      setActiveKey(e.key.toLowerCase());
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      // Only clear if the key being released is the one we tracked.
+      // This prevents Shift+key combos from leaving a stale activeKey.
+      setActiveKey((prev) => (prev === e.key.toLowerCase() ? null : prev));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup',   onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup',   onKeyUp);
+    };
+  }, []); // empty deps — listeners are stable, no stale closure risk
+
   // ── Session submission (fires automatically on status → 'finished') ─────────
   useSessionSubmit();
   // ── Phase 2: keyboard visual bridge ────────────────────────────────────────
@@ -215,11 +244,12 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
       });
       initSession(
         {
-          mode:      'words',
-          duration:  0,
-          wordCount: payload.wordCount,
-          language:  'english',
-          lessonId:  payload.lessonId,
+          mode:        'words',
+          duration:    0,
+          wordCount:   payload.wordCount,
+          language:    'english',
+          lessonId:    payload.lessonId,
+          allowedKeys: payload.config.allowedKeys, // → LiveKeyboard home-zone highlight
         },
         payload.words,
       );
@@ -327,6 +357,25 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
         onKeyDown={handleKeyDown}
         disabled={status === 'finished'}
       />
+
+      {/* ── Ghost Keyboard ────────────────────────────────────────────────────
+           Purely visual — observes hardware keystrokes via activeKey prop.
+           In lesson mode, illuminates allowed keys with a persistent tint.
+           Collapsed (opacity-0 + h-0) when session is finished to keep the
+           ResultsPanel clean. No prevent-default, no engine interaction. */}
+      <div
+        className={`w-full transition-all duration-300 ${
+          status === 'finished'
+            ? 'opacity-0 pointer-events-none h-0 overflow-hidden'
+            : 'opacity-100'
+        }`}
+      >
+        <LiveKeyboard
+          mode={isLesson ? 'lesson' : 'practice'}
+          allowedKeys={isLesson ? (config.allowedKeys ?? []) : []}
+          activeKey={activeKey}
+        />
+      </div>
 
       {/* Footer hint */}
       <p className="text-untyped text-xs font-mono">

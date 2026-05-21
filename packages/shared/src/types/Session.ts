@@ -11,6 +11,12 @@ export interface TypingSessionConfig {
   wordCount: number;
   language: string;
   lessonId?: string;
+  /**
+   * Full cumulative set of keys permitted in this lesson's generated text.
+   * Set from LessonConfig.allowedKeys when in lesson mode; undefined in practice mode.
+   * Consumed by LiveKeyboard to illuminate the "home zone" keys on the ghost keyboard.
+   */
+  allowedKeys?: string[];
 }
 
 /** Final computed results after a session ends */

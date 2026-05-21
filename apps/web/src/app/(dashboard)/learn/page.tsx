@@ -208,11 +208,12 @@ export default function LearnPage() {
       // Wire into typingStore — the TypingArena (on /practice) will pick this up
       initSession(
         {
-          mode:      'words',
-          duration:  0,           // unused in words mode
-          wordCount: payload.wordCount,
-          language:  'english',
-          lessonId:  payload.lessonId,
+          mode:        'words',
+          duration:    0,           // unused in words mode
+          wordCount:   payload.wordCount,
+          language:    'english',
+          lessonId:    payload.lessonId,
+          allowedKeys: payload.config.allowedKeys, // → LiveKeyboard home-zone highlight
         },
         payload.words,
       );
