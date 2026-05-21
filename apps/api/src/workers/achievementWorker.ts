@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { redis }  from '../config/redis';
-import { pool }   from '../config/database';
+import { redis } from '../config/redis';
+import { pool } from '../config/database';
 import { QUEUES } from '../config/bullmq';
 import { logger } from '../utils/logger';
 import type { AchievementJobPayload } from '../config/bullmq';
@@ -24,18 +24,18 @@ async function processAchievements(job: Job<AchievementJobPayload>): Promise<voi
     pool.query('SELECT id, slug, condition_json, xp_reward FROM achievements'),
   ]);
 
-  const stats    = statsResult.rows[0];
+  const stats = statsResult.rows[0];
   const unlocked = new Set(unlockedResult.rows.map((r: any) => r.slug));
-  const catalog  = catalogResult.rows;
+  const catalog = catalogResult.rows;
 
   if (!stats) return;
 
   const context = {
     totalSessions: stats.total_sessions,
-    bestWpm:       Math.max(stats.best_wpm, wpm),
-    currentWpm:    wpm,
+    bestWpm: Math.max(stats.best_wpm, wpm),
+    currentWpm: wpm,
     accuracy,
-    streakDays:    stats.streak_days,
+    streakDays: stats.streak_days,
   };
 
   const toUnlock: { id: string; xpReward: number; slug: string }[] = [];
@@ -47,10 +47,10 @@ async function processAchievements(job: Job<AchievementJobPayload>): Promise<voi
     let earned = false;
 
     switch (cond.type) {
-      case 'wpm_milestone':    earned = context.currentWpm    >= cond.threshold; break;
-      case 'accuracy_milestone': earned = context.accuracy    >= cond.threshold; break;
-      case 'sessions_count':   earned = context.totalSessions >= cond.threshold; break;
-      case 'streak_days':      earned = context.streakDays    >= cond.threshold; break;
+      case 'wpm_milestone': earned = context.currentWpm >= cond.threshold; break;
+      case 'accuracy_milestone': earned = context.accuracy >= cond.threshold; break;
+      case 'sessions_count': earned = context.totalSessions >= cond.threshold; break;
+      case 'streak_days': earned = context.streakDays >= cond.threshold; break;
     }
 
     if (earned) toUnlock.push({ id: achievement.id, xpReward: achievement.xp_reward, slug: achievement.slug });
@@ -87,7 +87,7 @@ export function startAchievementWorker(): Worker {
   const worker = new Worker<AchievementJobPayload>(
     QUEUES.ACHIEVEMENTS,
     processAchievements,
-    { connection: redis, concurrency: 5 },
+    { connection: redis, concurrency: 5, stalledInterval: 300000 },
   );
   worker.on('failed', (job, err) =>
     logger.error({ jobId: job?.id, err }, 'achievementWorker failed'),

@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { redis }  from '../config/redis';
-import { pool }   from '../config/database';
+import { redis } from '../config/redis';
+import { pool } from '../config/database';
 import { QUEUES } from '../config/bullmq';
 import { logger } from '../utils/logger';
 import type { ArchivalJobPayload } from '../config/bullmq';
@@ -35,7 +35,7 @@ export function startArchivalWorker(): Worker {
   const worker = new Worker<ArchivalJobPayload>(
     QUEUES.ARCHIVAL,
     processArchival,
-    { connection: redis, concurrency: 1 },
+    { connection: redis, concurrency: 1, stalledInterval: 300000 },
   );
   worker.on('failed', (job, err) =>
     logger.error({ jobId: job?.id, err }, 'archivalWorker failed'),
