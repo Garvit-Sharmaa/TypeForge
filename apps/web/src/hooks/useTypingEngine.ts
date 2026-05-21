@@ -228,9 +228,18 @@ export function useTypingEngine(): TypingEngineHandles {
 
     const correctChars = e.correctKeystrokes;
     const totalChars   = e.totalKeystrokes;
-    const wpm          = Math.round((e.correctWords * 1) / elapsedMin);
-    const rawWpm       = Math.round((totalChars / 5) / elapsedMin);
-    const accuracy     = totalChars > 0
+    // Industry-standard character-based WPM (same as monkeytype / typeracer):
+    //   wpm    = (correct keystrokes / 5) / elapsed minutes
+    //   rawWpm = (total  keystrokes  / 5) / elapsed minutes
+    //
+    // We do NOT use (correctWords / elapsedMin) because it penalises any
+    // mid-word correction: a 6-char word with 1 backspace gets wpm credit of
+    // ZERO even if the final typed string is perfect. On longer-word lessons
+    // (4+) this collapses wpm to near-zero, silently failing the progression
+    // gate. Character-based WPM is unaffected by backspace patterns.
+    const wpm    = Math.round((correctChars / 5) / elapsedMin);
+    const rawWpm = Math.round((totalChars   / 5) / elapsedMin);
+    const accuracy = totalChars > 0
       ? Math.round((correctChars / totalChars) * 100)
       : 100;
 
