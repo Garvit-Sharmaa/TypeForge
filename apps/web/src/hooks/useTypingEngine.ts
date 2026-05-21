@@ -150,6 +150,14 @@ export function useTypingEngine(): TypingEngineHandles {
   const timerIntervalRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const caretBlinkTimeoutRef= useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Bug 1 fix: track first-keystroke with a ref, NOT `status` state ────────
+  // `handleKeyDown` closes over a snapshot of `status`. Under React's batched
+  // update scheduling, the second keystroke can arrive before the re-render
+  // caused by setStatus('running') has flushed — meaning `status` still reads
+  // 'idle' and startIntervals() fires twice, spawning duplicate intervals.
+  // A ref update is synchronous and never goes stale across renders.
+  const hasStartedRef = useRef<boolean>(false);
+
   // ── Session time tracking ─────────────────────────────────────────────────
   const timeRemainingRef = useRef<number>(config.duration);
 
@@ -395,6 +403,8 @@ export function useTypingEngine(): TypingEngineHandles {
       keystrokeEvents:   [],
       caretNeedsUpdate:  false,
     };
+    // Bug 1 fix: reset the start-gate ref so the next session initialises cleanly
+    hasStartedRef.current = false;
     timeRemainingRef.current = liveConfig.duration;
 
     // Reset all char DOM nodes back to untyped class (after next paint)
@@ -426,13 +436,23 @@ export function useTypingEngine(): TypingEngineHandles {
       if (!word) return;
 
       // ── First keystroke: transition idle → running ──────────────────────
-      if (status === 'idle') {
-        eng.sessionStartTime = performance.now();
-        eng.lastKeyTime      = eng.sessionStartTime;
+      // Bug 1 fix: gate on `hasStartedRef` (a synchronous ref) instead of
+      // the `status` state value. `status` is a stale closure snapshot —
+      // rapid keypresses arrive before React flushes setStatus('running'),
+      // so the second keystroke would read `status === 'idle'` and call
+      // startIntervals() again, spawning a duplicate interval and a
+      // duplicate countdown timer. The ref update is instantaneous.
+      if (!hasStartedRef.current) {
+        hasStartedRef.current    = true;
+        eng.sessionStartTime     = performance.now();
+        eng.lastKeyTime          = eng.sessionStartTime;
         setStatus('running');
         startIntervals();
       }
-      if (status === 'finished') return;
+
+      // Bug 1 fix: read live status from store (bypasses stale closure) to
+      // guard against keypresses that race with session completion.
+      if (useTypingStore.getState().status === 'finished') return;
 
       const now     = performance.now();
       const latency = eng.lastKeyTime ? now - eng.lastKeyTime : 0;
@@ -479,8 +499,13 @@ export function useTypingEngine(): TypingEngineHandles {
         eng.charIdx = 0;
         eng.input   = '';
 
-        // Check words-mode completion
-        if (config.mode === 'words' && eng.wordIdx >= words.length) {
+        // Bug 2 fix: end-of-array check applies to ALL modes, not just 'words'.
+        // In time mode, if the user is on the last word and hits Space, they
+        // would previously get trapped — wordIdx advances past the array bound,
+        // every subsequent keypress hits `words[wordIdx] === undefined` and
+        // returns early, forcing them to wait for the clock to expire.
+        // Symmetrically mirrors the existing words-mode completion check.
+        if (eng.wordIdx >= words.length) {
           finishSession();
           return;
         }
@@ -548,7 +573,12 @@ export function useTypingEngine(): TypingEngineHandles {
       updateCaretPosition();
       setCaretTyping(true);
     },
-    [words, status, config.mode, setStatus, startIntervals,
+    // Bug 1 fix: `status` removed from deps — the start-gate now uses
+    // `hasStartedRef` (immune to stale closure) and the finished guard uses
+    // `useTypingStore.getState().status` (a live store read). Removing `status`
+    // prevents the closure from being recreated on every status transition,
+    // which was itself a source of the timer initialisation race.
+    [words, config.mode, setStatus, startIntervals,
      updateCaretPosition, scrollToCurrentWord, setCaretTyping, finishSession],
   );
 
