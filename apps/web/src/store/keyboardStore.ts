@@ -149,6 +149,15 @@ export interface KeyboardVisualState {
   /** Show key labels (display / displayShift) inside SVG key bodies */
   showKeyLabels: boolean;
 
+  // ── Hover (heatmap tooltip) ───────────────────────────────────────────────
+
+  /**
+   * ID of the key currently under the cursor (heatmap mode only).
+   * Null when nothing is hovered. Used by Keyboard.tsx to render the
+   * HTML tooltip overlay that lives outside the SVG stacking context.
+   */
+  hoveredKeyId: string | null;
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   /**
@@ -222,6 +231,12 @@ export interface KeyboardVisualState {
 
   /** Toggle finger color coding */
   toggleFingerColors: () => void;
+
+  /**
+   * Set/clear the hovered key (heatmap mode only).
+   * Called from Key.tsx onMouseEnter/onMouseLeave.
+   */
+  setHoveredKey: (keyId: string | null) => void;
 }
 
 // ─── Initial per-key state factory ───────────────────────────────────────────
@@ -265,6 +280,7 @@ export const useKeyboardStore = create<KeyboardVisualState>()(
     heatmapData:     {},
     showFingerColors:true,
     showKeyLabels:   true,
+    hoveredKeyId:    null,
 
     // ── setLayout ────────────────────────────────────────────────────────────
     setLayout: (layout) => {
@@ -398,6 +414,7 @@ export const useKeyboardStore = create<KeyboardVisualState>()(
     enableHeatmap:      (mode) => set({ heatmapEnabled: true,  heatmapMode: mode }),
     setHeatmapMode:     (mode) => set({ heatmapMode: mode }),
     toggleFingerColors: () => set((s) => ({ showFingerColors: !s.showFingerColors })),
+    setHoveredKey:      (keyId) => set({ hoveredKeyId: keyId }),
 
   })),
 );
@@ -417,3 +434,4 @@ export const selectHeatmapMode      = (s: KeyboardVisualState) => s.heatmapMode;
 export const selectHeatmapData      = (s: KeyboardVisualState) => s.heatmapData;
 export const selectShowFingerColors = (s: KeyboardVisualState) => s.showFingerColors;
 export const selectShowKeyLabels    = (s: KeyboardVisualState) => s.showKeyLabels;
+export const selectHoveredKeyId     = (s: KeyboardVisualState) => s.hoveredKeyId;

@@ -1,8 +1,9 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   useKeyboardStore, selectLayout,
   selectHeatmapEnabled, selectShowFingerColors,
+  selectHoveredKeyId, selectHeatmapData, selectHeatmapMode,
 } from '@/store/keyboardStore';
 import { Row } from './Row';
 import type { KeyboardLayout } from '@typing-master/shared';
@@ -24,6 +25,26 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
   const layout          = useKeyboardStore(selectLayout);
   const heatmapEnabled  = useKeyboardStore(selectHeatmapEnabled);
   const showFingerColors= useKeyboardStore(selectShowFingerColors);
+  const hoveredKeyId    = useKeyboardStore(selectHoveredKeyId);
+  const heatmapData     = useKeyboardStore(selectHeatmapData);
+  const heatmapMode     = useKeyboardStore(selectHeatmapMode);
+
+  // Track raw mouse position relative to the wrapper div for tooltip placement
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
+  // Resolve hovered key's analytics data and display label for the tooltip
+  const hoveredKd  = hoveredKeyId ? heatmapData[hoveredKeyId] : null;
+  const hoveredDef = React.useMemo(
+    () => hoveredKeyId && layout ? layout.keys.find((k) => k.id === hoveredKeyId) ?? null : null,
+    [hoveredKeyId, layout],
+  );
 
   // Load layout once
   useEffect(() => {
@@ -70,7 +91,12 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
   );
 
   return (
-    <div className={className}>
+    <div
+      ref={wrapperRef}
+      className={className}
+      style={{ position: 'relative' }}
+      onMouseMove={heatmapEnabled ? handleMouseMove : undefined}
+    >
       <svg
         viewBox={`0 0 ${layout.viewBoxWidth} ${layout.viewBoxHeight}`}
         width="100%"
@@ -84,6 +110,48 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
           <Row key={rowDef.id} rowDef={rowDef} />
         ))}
       </svg>
+
+      {/* ── Heatmap tooltip overlay ──────────────────────────────────────────
+           Rendered as HTML outside SVG so it can use backdrop-blur / z-index.
+           pointer-events:none prevents it from swallowing mouse events meant
+           for the SVG keys underneath. z-index:100 ensures no stacking buries it. */}
+      {heatmapEnabled && hoveredKeyId && (
+        <div
+          style={{
+            position:      'absolute',
+            left:          Math.min(mousePos.x + 14, (wrapperRef.current?.offsetWidth ?? 999) - 160),
+            top:           mousePos.y - 10,
+            pointerEvents: 'none',
+            zIndex:        100,
+          }}
+          className="glass rounded-xl px-3 py-2 text-xs font-mono
+                     border border-violet/20 shadow-lg"
+        >
+          <div className="font-bold mb-1" style={{ color: '#e2e8f0' }}>
+            {hoveredDef?.display ?? hoveredKeyId}
+          </div>
+          {hoveredKd ? (
+            <div className="flex flex-col gap-0.5" style={{ color: '#6b7280' }}>
+              <span>
+                Error rate:{' '}
+                <span style={{ color: hoveredKd.errorRate > 0.1 ? '#f87171' : '#fbbf24' }}>
+                  {(hoveredKd.errorRate * 100).toFixed(1)}%
+                </span>
+              </span>
+              <span>
+                Avg latency:{' '}
+                <span style={{ color: '#a78bfa' }}>{Math.round(hoveredKd.avgLatencyMs)}ms</span>
+              </span>
+              <span>
+                Samples:{' '}
+                <span style={{ color: '#e2e8f0' }}>{hoveredKd.sampleCount}</span>
+              </span>
+            </div>
+          ) : (
+            <div style={{ color: '#3d3d5c' }}>no data yet</div>
+          )}
+        </div>
+      )}
 
       {/* controlsSlot=null → suppress; controlsSlot=undefined → default */}
       {controlsSlot === null ? null : (controlsSlot ?? defaultControls)}

@@ -85,6 +85,7 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
   const heatmapMode      = useKeyboardStore(selectHeatmapMode);
   const heatmapData      = useKeyboardStore(selectHeatmapData);
   const showFingerColors = useKeyboardStore(selectShowFingerColors);
+  const setHoveredKey    = useKeyboardStore((s) => s.setHoveredKey);
 
   const controls  = useAnimation();
   const prevPress = useRef<number | null>(null);
@@ -171,7 +172,22 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
   const isHeatmapStatic = heatmapEnabled;
 
   return (
-    <g transform={`translate(${cx},${cy})`} role="img" aria-label={display}>
+    <g
+      transform={`translate(${cx},${cy})`}
+      role="img"
+      aria-label={display}
+      // Hover events: only active in heatmap mode (zero overhead during live typing)
+      onMouseEnter={
+        heatmapEnabled
+          ? () => {
+              console.log('[DEBUG] Hit Key:', id, 'display:', display);
+              setHoveredKey(id);
+            }
+          : undefined
+      }
+      onMouseLeave={heatmapEnabled ? () => setHoveredKey(null) : undefined}
+      style={heatmapEnabled ? { cursor: 'crosshair' } : undefined}
+    >
       <motion.g
         animate={isHeatmapStatic ? undefined : controls}
         style={{ originX: 0, originY: 0 }}
