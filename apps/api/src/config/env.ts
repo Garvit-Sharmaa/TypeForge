@@ -33,6 +33,16 @@ const envSchema = z.object({
   // Observability
   LOG_LEVEL: z.enum(['trace','debug','info','warn','error','fatal']).default('info'),
   SENTRY_DSN: z.string().optional(),
+
+  // ── QStash (Upstash) — Phase 2 transport ────────────────────────────────────
+  // Required in production; optional locally so dev env doesn't hard-crash.
+  // The producer (bullmq.ts) guards against missing values at call-time.
+  QSTASH_TOKEN:               z.string().optional(),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+  QSTASH_NEXT_SIGNING_KEY:    z.string().optional(),
+  // The public-facing URL of this API — QStash needs an https:// target to POST to.
+  // Example: https://api.typeforge.app  (no trailing slash)
+  PUBLIC_API_URL: z.string().url().optional(),
 });
 
 // Parse and freeze — crash early on misconfiguration

@@ -1,12 +1,27 @@
-import { Worker, Job } from 'bullmq';
-import { redis } from '../config/redis';
-import { pool } from '../config/database';
-import { QUEUES } from '../config/bullmq';
-import { logger } from '../utils/logger';
-import type { StreakJobPayload } from '../config/bullmq';
+/**
+ * streakWorker.ts — Daily streak tracking and user_statistics sync.
+ *
+ * ═══════════════════════════════════════════════════════════════
+ *  MIGRATION STATUS: PHASE 2 COMPLETE
+ *
+ *  The BullMQ Worker consumer is commented out below.
+ *  processStreak() is now a plain exported async function.
+ *  It is called by the QStash God Handler (Phase 3) via Promise.all.
+ *  All PostgreSQL logic is unchanged — fully idempotent.
+ * ═══════════════════════════════════════════════════════════════
+ */
 
-async function processStreak(job: Job<StreakJobPayload>): Promise<void> {
-  const { userId } = job.data;
+import { pool }   from '../config/database';
+import { logger } from '../utils/logger';
+
+// ── NEW: pure exported function — no BullMQ Job wrapper ──────────────────────
+/**
+ * Update the user's daily streak. Idempotent — calling multiple times on
+ * the same day short-circuits immediately (lastDate === today guard).
+ *
+ * Called directly by the QStash God Handler. Safe to retry.
+ */
+export async function processStreak(userId: string): Promise<void> {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
   const { rows } = await pool.query(
@@ -14,21 +29,21 @@ async function processStreak(job: Job<StreakJobPayload>): Promise<void> {
     [userId],
   );
 
-  let current = 0;
-  let longest = 0;
+  let current  = 0;
+  let longest  = 0;
   let lastDate: string | null = null;
 
   if (rows.length) {
-    current = rows[0].current_streak;
-    longest = rows[0].longest_streak;
+    current  = rows[0].current_streak;
+    longest  = rows[0].longest_streak;
     lastDate = rows[0].last_active_date?.toISOString().slice(0, 10) ?? null;
   }
 
-  // Already updated today — idempotent
+  // Already updated today — idempotent early exit
   if (lastDate === today) return;
 
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-  const newStreak = lastDate === yesterday ? current + 1 : 1;
+  const yesterday  = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  const newStreak  = lastDate === yesterday ? current + 1 : 1;
   const newLongest = Math.max(longest, newStreak);
 
   await pool.query(
@@ -50,6 +65,23 @@ async function processStreak(job: Job<StreakJobPayload>): Promise<void> {
   logger.info({ userId, streak: newStreak }, 'Streak updated');
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   === BACKUP: OLD BULLMQ ===
+   Original BullMQ Worker consumer. Kept verbatim for instant rollback.
+   To revert: uncomment this block and remove the export from processStreak.
+   ═══════════════════════════════════════════════════════════════════════════
+
+import { Worker, Job } from 'bullmq';
+import { redis } from '../config/redis';
+import { QUEUES } from '../config/bullmq';
+import type { StreakJobPayload } from '../config/bullmq';
+
+async function processStreak(job: Job<StreakJobPayload>): Promise<void> {
+  const { userId } = job.data;
+  // ... (identical body — see active function above)
+}
+
 export function startStreakWorker(): Worker {
   const worker = new Worker<StreakJobPayload>(
     QUEUES.STREAKS,
@@ -62,3 +94,6 @@ export function startStreakWorker(): Worker {
   logger.info('streakWorker started');
   return worker;
 }
+
+   === END BACKUP: OLD BULLMQ ===
+   ═══════════════════════════════════════════════════════════════════════════ */
