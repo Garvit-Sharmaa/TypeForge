@@ -30,13 +30,31 @@ export const useUserStore = create<UserState>()(
       setStats:   (stats)        => set({ stats }),
       setLoading: (v)            => set({ isLoading: v }),
       setHydrated:(v)            => set({ isHydrated: v }),
-      logout:     ()             => set({ user: null, tokens: null, stats: null }),
+      logout: () => {
+        // 1. Clear in-memory Zustand state immediately.
+        set({ user: null, tokens: null, stats: null });
+        // 2. Wipe the persisted localStorage entry so a new user opening
+        //    this device cannot momentarily hydrate the previous user's
+        //    identity — which would cause their lessons/progression to
+        //    flash visible before the fresh fetch resolves.
+        //    useUserStore.persist.clearStorage() is the official Zustand API;
+        //    it keeps the key name DRY (no hardcoded 'tm-user' string here).
+        try { useUserStore.persist.clearStorage(); } catch { /* SSR guard */ }
+      },
     }),
     {
       name:    'tm-user',
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ user: s.user, tokens: s.tokens }),
       onRehydrateStorage: () => (state) => {
+        // Guard: if the rehydrated user is structurally invalid (missing id),
+        // treat the persisted entry as a corrupt/stale write and wipe it.
+        // This prevents a deleted or partially-written account from being
+        // treated as a valid session on page load.
+        if (state?.user && !state.user.id) {
+          state.logout();
+          return;
+        }
         state?.setHydrated(true);
       },
     },
