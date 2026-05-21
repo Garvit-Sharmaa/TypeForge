@@ -1,8 +1,8 @@
 import { Worker, Job } from 'bullmq';
-import { redis }       from '../config/redis';
-import { pool }        from '../config/database';
-import { QUEUES }      from '../config/bullmq';
-import { logger }      from '../utils/logger';
+import { redis } from '../config/redis';
+import { pool } from '../config/database';
+import { QUEUES } from '../config/bullmq';
+import { logger } from '../utils/logger';
 import type { AnalyticsJobPayload } from '../config/bullmq';
 
 /**
@@ -22,9 +22,9 @@ interface CompactKeystroke {
 }
 
 interface KeyStat {
-  errors:        number;
-  total:         number;
-  totalLatencyMs:number;
+  errors: number;
+  total: number;
+  totalLatencyMs: number;
 }
 
 async function processAnalytics(job: Job<AnalyticsJobPayload>): Promise<void> {
@@ -50,11 +50,11 @@ async function processAnalytics(job: Job<AnalyticsJobPayload>): Promise<void> {
   // ── Aggregate per-key stats ──────────────────────────────────────────────
   const keyStats = new Map<string, KeyStat>();
   for (const ks of keystrokes) {
-    const key     = ks.e; // always track expected key (what was SUPPOSED to be typed)
+    const key = ks.e; // always track expected key (what was SUPPOSED to be typed)
     const existing = keyStats.get(key) ?? { errors: 0, total: 0, totalLatencyMs: 0 };
     keyStats.set(key, {
-      errors:         existing.errors + (ks.c === 0 ? 1 : 0),
-      total:          existing.total  + 1,
+      errors: existing.errors + (ks.c === 0 ? 1 : 0),
+      total: existing.total + 1,
       totalLatencyMs: existing.totalLatencyMs + (ks.l ?? 0),
     });
   }
@@ -102,8 +102,9 @@ export function startAnalyticsWorker(): Worker {
     QUEUES.ANALYTICS,
     processAnalytics,
     {
-      connection:  redis,
+      connection: redis,
       concurrency: 5,
+      stalledInterval: 300000
     },
   );
 

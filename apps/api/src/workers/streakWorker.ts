@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { redis }  from '../config/redis';
-import { pool }   from '../config/database';
+import { redis } from '../config/redis';
+import { pool } from '../config/database';
 import { QUEUES } from '../config/bullmq';
 import { logger } from '../utils/logger';
 import type { StreakJobPayload } from '../config/bullmq';
@@ -19,8 +19,8 @@ async function processStreak(job: Job<StreakJobPayload>): Promise<void> {
   let lastDate: string | null = null;
 
   if (rows.length) {
-    current  = rows[0].current_streak;
-    longest  = rows[0].longest_streak;
+    current = rows[0].current_streak;
+    longest = rows[0].longest_streak;
     lastDate = rows[0].last_active_date?.toISOString().slice(0, 10) ?? null;
   }
 
@@ -54,7 +54,7 @@ export function startStreakWorker(): Worker {
   const worker = new Worker<StreakJobPayload>(
     QUEUES.STREAKS,
     processStreak,
-    { connection: redis, concurrency: 10 },
+    { connection: redis, concurrency: 10, stalledInterval: 300000 },
   );
   worker.on('failed', (job, err) =>
     logger.error({ jobId: job?.id, err }, 'streakWorker failed'),
