@@ -95,7 +95,11 @@ async function getUserMaxStage(userId: string): Promise<number> {
 
 /** Return the full curriculum with per-user lock status. */
 export async function listLessons(userId?: string): Promise<LessonListItem[]> {
-  const maxStage = userId ? await getUserMaxStage(userId) : 0;
+  // Use -1 (not 0) as the "nothing completed" sentinel — consistent with
+  // getUserMaxStage(). Lesson 1 has stage=0; maxStage=0 would incorrectly
+  // unlock Lesson 2 for guests (1 > 0+1 is false). With -1, only L1 is
+  // unlocked for guests (0 > 0 is false; 1 > 0 is true → locked ✓).
+  const maxStage = userId ? await getUserMaxStage(userId) : -1;
   const withLock = getLessonsWithLockStatus(maxStage);
 
   return withLock.map((l) => ({

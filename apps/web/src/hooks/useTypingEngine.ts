@@ -331,6 +331,14 @@ export function useTypingEngine(): TypingEngineHandles {
     //   setConfig({ lessonId: undefined }) before startNewSession(), so by
     //   the time we reach this point, any stale lessonId is already cleared.
     //
+    // LESSON + EMPTY WORDS (config error):
+    //   A lessonId is set but the backend word list never arrived. This means
+    //   the Academy page failed to call initSession() before navigating here.
+    //   We MUST NOT silently fall back to pickWords() — that would serve the
+    //   full master dictionary, bypassing the allowedKeys filter entirely and
+    //   making Lesson 4+ indistinguishable from free practice.
+    //   Instead: surface a loud sentinel so the bug is immediately visible.
+    //
     let newWords: string[];
     if (liveConfig.lessonId && liveWords.length > 0) {
       // Lesson mode — reuse the filtered words from the store
@@ -340,6 +348,17 @@ export function useTypingEngine(): TypingEngineHandles {
         `lessonId="${liveConfig.lessonId}"`,
         `words[${newWords.length}]:`, newWords.slice(0, 6),
       );
+    } else if (liveConfig.lessonId && liveWords.length === 0) {
+      // ── CONFIG ERROR: lesson ID set but no words loaded ─────────────────
+      // DO NOT fall back to pickWords() — that silently bypasses allowedKeys.
+      // Render an impossible sentinel pair so the misconfiguration is obvious.
+      console.error(
+        '[Engine] CONFIG ERROR: lessonId is set but liveWords is empty.',
+        `lessonId="${liveConfig.lessonId}"`,
+        'The Academy page must call initSession() before navigating to /practice.',
+        'Rendering error sentinel — DO NOT submit this session.',
+      );
+      newWords = ['CONFIG-ERROR', 'MISSING-WORDS'];
     } else {
       // Practice mode — pick random words
       newWords = pickWords(liveConfig.wordCount);
