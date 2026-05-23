@@ -7,22 +7,22 @@ import { RANK_COLORS } from '@typing-master/shared';
 import type { UserRank } from '@typing-master/shared';
 
 const NAV_LINKS = [
-  { href: '/practice',  label: 'arena',   icon: '⌨' },
-  { href: '/learn',     label: 'academy', icon: '🎓' },
-  { href: '/dashboard', label: 'stats',   icon: '📊' },
+  { href: '/practice', label: 'arena', icon: '⌨' },
+  { href: '/learn', label: 'academy', icon: '🎓' },
+  { href: '/dashboard', label: 'stats', icon: '📊' },
 ] as const;
 
 function NavHeader() {
   const { logout, isAuthenticated } = useAuth();
-  const user    = useUserStore(selectUser);
-  const path    = usePathname();
+  const user = useUserStore(selectUser);
+  const path = usePathname();
 
   return (
     <header className="border-b border-surface-2 px-6 py-3 flex items-center justify-between
                        backdrop-blur-sm sticky top-0 z-30 bg-surface/80">
       {/* Logo */}
       <Link href="/" className="font-mono text-violet-light font-bold tracking-tight text-lg shrink-0">
-        typing<span className="text-correct">master</span>
+        Type<span className="text-correct">Forge</span>
       </Link>
 
       {/* Primary nav */}
@@ -38,8 +38,8 @@ function NavHeader() {
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg
                           transition-all duration-150 text-xs
                           ${active
-                            ? 'bg-violet/20 text-violet-light border border-violet/30'
-                            : 'text-untyped hover:text-muted hover:bg-surface-3'}`}
+                  ? 'bg-violet/20 text-violet-light border border-violet/30'
+                  : 'text-untyped hover:text-muted hover:bg-surface-3'}`}
             >
               <span>{icon}</span>
               <span>{label}</span>
