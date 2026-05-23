@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'TypingMaster — Adaptive Keyboard Intelligence',
+  title: 'TypeForge — Adaptive Keyboard Intelligence',
 };
 
 export default function LandingPage() {
@@ -46,13 +46,13 @@ export default function LandingPage() {
         <div className="flex flex-wrap justify-center gap-2 mt-2">
           {['Zero-latency engine', 'Weak key heatmap', 'XP & Rankings',
             'Daily challenges', 'Multiplayer races'].map((f) => (
-            <span
-              key={f}
-              className="glass-subtle text-muted text-xs px-3 py-1.5 rounded-full font-mono"
-            >
-              {f}
-            </span>
-          ))}
+              <span
+                key={f}
+                className="glass-subtle text-muted text-xs px-3 py-1.5 rounded-full font-mono"
+              >
+                {f}
+              </span>
+            ))}
         </div>
       </section>
 

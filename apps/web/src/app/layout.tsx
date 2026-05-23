@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | TypingMaster',
-    default: 'TypingMaster — Adaptive Keyboard Intelligence',
+    template: '%s | TypeForge',
+    default: 'TypeForge — Adaptive Keyboard Intelligence',
   },
   description:
     'Master your typing speed with AI-powered analytics, personalized drills, and real-time weak-key detection. Track WPM, accuracy, and beat your personal best.',
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   ),
   openGraph: {
     type: 'website',
-    siteName: 'TypingMaster',
+    siteName: 'TypeForge',
   },
 };
 
