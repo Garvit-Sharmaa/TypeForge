@@ -21,8 +21,8 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative z-10 flex flex-col items-center gap-6 text-center max-w-2xl">
         <div className="font-mono text-5xl font-bold tracking-tight">
-          <span className="text-violet-light">typing</span>
-          <span className="text-correct">master</span>
+          <span className="text-violet-light">Type</span>
+          <span className="text-correct">Forge</span>
         </div>
 
         <p className="text-muted text-lg leading-relaxed max-w-md">
