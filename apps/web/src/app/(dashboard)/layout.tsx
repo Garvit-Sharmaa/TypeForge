@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserStore, selectUser } from '@/store/userStore';
 import { RANK_COLORS } from '@typing-master/shared';
 import type { UserRank } from '@typing-master/shared';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const NAV_LINKS = [
   { href: '/practice', label: 'arena', icon: '⌨' },
@@ -50,6 +51,9 @@ function NavHeader() {
 
       {/* User section */}
       <div className="flex items-center gap-3 shrink-0">
+        {/* Theme toggle — always visible, before auth controls */}
+        <ThemeToggle />
+
         {isAuthenticated && user ? (
           <>
             {/* XP rank dot + username */}
