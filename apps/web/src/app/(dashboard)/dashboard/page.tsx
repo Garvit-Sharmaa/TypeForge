@@ -1,47 +1,75 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import {
+  Zap, Trophy, Target, BarChart3,
+  Flame, Keyboard as KeyboardIcon,
+  ArrowRight, RefreshCw,
+} from 'lucide-react';
 import { useUserStore, selectTokens, selectUser } from '@/store/userStore';
-import { useAnalyticsStore } from '@/store/analyticsStore';
-import { analyticsApi }      from '@/lib/api';
-import { StatCard, XpBar }   from '@/components/dashboard/StatCard';
-import WpmChart              from '@/components/dashboard/WpmChart';
-import { Keyboard }          from '@/components/keyboard/Keyboard';
-import { useWeakKeyHeatmap } from '@/hooks/useWeakKeyHeatmap';
-import { useKeyboardStore }  from '@/store/keyboardStore';
-import type { UserRank }     from '@typing-master/shared';
+import { useAnalyticsStore }                       from '@/store/analyticsStore';
+import { analyticsApi }                            from '@/lib/api';
+import { StatCard, XpBar }                         from '@/components/dashboard/StatCard';
+import WpmChart                                    from '@/components/dashboard/WpmChart';
+import { Keyboard }                                from '@/components/keyboard/Keyboard';
+import { useWeakKeyHeatmap }                       from '@/hooks/useWeakKeyHeatmap';
+import { useKeyboardStore }                        from '@/store/keyboardStore';
+import type { UserRank }                           from '@typing-master/shared';
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-const Skeleton = ({ className = '' }: { className?: string }) => (
-  <div className={`animate-pulse bg-surface-2 rounded-xl ${className}`} />
-);
-
-const Section = ({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) => (
-  <section id={id} className="flex flex-col gap-4">
-    <h2 className="font-mono text-sm font-semibold text-muted uppercase tracking-widest">{title}</h2>
-    {children}
-  </section>
-);
-
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function formatTime(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-// ── Heatmap Controls — injected via controlsSlot ──────────────────────────────
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+const Skeleton = ({ className = '' }: { className?: string }) => (
+  <div className={[
+    'animate-pulse rounded-2xl',
+    'bg-slate-100 dark:bg-white/[0.04]',
+    className,
+  ].join(' ')} />
+);
+
+// ── Section wrapper ───────────────────────────────────────────────────────────
+const Section = ({
+  title, children, id,
+}: { title: string; children: React.ReactNode; id?: string }) => (
+  <section id={id} className="flex flex-col gap-4">
+    <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em]
+                   text-slate-400 dark:text-slate-500">
+      {title}
+    </h2>
+    {children}
+  </section>
+);
+
+// ── Premium card wrapper (used for chart + heatmap containers) ────────────────
+const PanelCard = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={[
+    'rounded-2xl p-6',
+    'bg-white border border-slate-200 shadow-card',
+    'dark:bg-[#111827] dark:border-white/5 dark:shadow-card-inset',
+    className,
+  ].join(' ')}>
+    {children}
+  </div>
+);
+
+// ── Heatmap controls (unchanged logic, updated styling) ───────────────────────
 function HeatmapControls() {
   const { dimension, setDimension, isLoading, hasData, error, refetch } =
     useWeakKeyHeatmap('accuracy');
 
-  const { toggleHeatmap } = useKeyboardStore();
-
   if (error) {
     return (
-      <div className="flex items-center gap-3 mt-2 px-1">
-        <span className="text-[10px] font-mono text-incorrect">{error}</span>
+      <div className="flex items-center gap-3 mt-2">
+        <span className="text-[10px] font-mono text-red-500 dark:text-red-400">{error}</span>
         <button onClick={refetch}
-          className="text-[10px] font-mono text-violet-light underline">retry</button>
+          className="text-[10px] font-mono text-purple-500 dark:text-purple-400 underline">
+          retry
+        </button>
       </div>
     );
   }
@@ -49,50 +77,53 @@ function HeatmapControls() {
   return (
     <div className="flex items-center gap-3 mt-3 flex-wrap">
       {/* Dimension toggle */}
-      <div className="flex items-center bg-surface-2 border border-surface-3 rounded-lg p-0.5 gap-0.5">
+      <div className="flex items-center bg-slate-100 dark:bg-white/[0.06]
+                      border border-slate-200 dark:border-white/5
+                      rounded-lg p-0.5 gap-0.5">
         {(['accuracy', 'speed'] as const).map((d) => (
           <button
             key={d}
             id={`heatmap-${d}-btn`}
             onClick={() => setDimension(d)}
-            className={`text-[10px] font-mono px-3 py-1.5 rounded-md transition-all duration-150
-              ${dimension === d
-                ? 'bg-violet text-white shadow-sm'
-                : 'text-untyped hover:text-muted'}`}
+            className={[
+              'text-[10px] font-mono px-3 py-1.5 rounded-md transition-all duration-150',
+              dimension === d
+                ? 'bg-purple-600 dark:bg-purple-500 text-white shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300',
+            ].join(' ')}
           >
             {d === 'accuracy' ? '⚠ accuracy' : '⚡ speed'}
           </button>
         ))}
       </div>
 
-      {/* Loading state */}
       {isLoading && (
-        <span className="text-[10px] font-mono text-untyped animate-pulse">loading data…</span>
+        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600 animate-pulse">
+          loading…
+        </span>
       )}
 
-      {/* No-data notice */}
       {!isLoading && !hasData && (
-        <span className="text-[10px] font-mono text-untyped">
+        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600">
           Complete sessions to see per-key data
         </span>
       )}
 
-      {/* Color scale legend */}
       {hasData && (
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-[10px] text-untyped font-mono">
+          <span className="text-[10px] text-slate-400 dark:text-slate-600 font-mono">
             {dimension === 'accuracy' ? 'error rate:' : 'avg latency:'}
           </span>
           {[
-            { label: dimension === 'accuracy' ? '0%' : '<80ms',  color: '#0d2a18' },
-            { label: dimension === 'accuracy' ? '5%' : '150ms',  color: '#3d2800' },
-            { label: dimension === 'accuracy' ? '15%': '250ms',  color: '#601500' },
-            { label: dimension === 'accuracy' ? '25%+':'350ms+', color: '#6b0c0c' },
+            { label: dimension === 'accuracy' ? '0%'   : '<80ms',  color: '#0d2a18' },
+            { label: dimension === 'accuracy' ? '5%'   : '150ms',  color: '#3d2800' },
+            { label: dimension === 'accuracy' ? '15%'  : '250ms',  color: '#601500' },
+            { label: dimension === 'accuracy' ? '25%+' : '350ms+', color: '#6b0c0c' },
           ].map(({ label, color }) => (
             <div key={label} className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm border border-white/10"
+              <span className="w-2.5 h-2.5 rounded-sm border border-black/10 dark:border-white/10"
                     style={{ backgroundColor: color }} />
-              <span className="text-[10px] text-muted font-mono">{label}</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-500 font-mono">{label}</span>
             </div>
           ))}
         </div>
@@ -101,17 +132,17 @@ function HeatmapControls() {
   );
 }
 
-// ── Dashboard types ───────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface DashStats {
   totalSessions: number; avgWpm: number; bestWpm: number; avgRawWpm: number;
   avgAccuracy: number; totalTimeMs: number; streakDays: number; xp: number; rank: string;
 }
 interface WpmPoint { sessionIndex: number; wpm: number; accuracy: number; completedAt: string; }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const tokens     = useUserStore(selectTokens);
-  const user       = useUserStore(selectUser);
+  const tokens = useUserStore(selectTokens);
+  const user   = useUserStore(selectUser);
   const { dashboard, isLoading, lastFetched, setDashboard, setLoading } = useAnalyticsStore();
 
   const [wpmHistory, setWpmHistory] = useState<WpmPoint[]>([]);
@@ -120,8 +151,6 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     if (!tokens?.accessToken) return;
-    // Only serve cached data if lastFetched is set AND within 60s.
-    // invalidate() sets lastFetched=null, so a post-session navigation always re-fetches.
     if (lastFetched !== null && Date.now() - lastFetched < 60_000 && dashboard) {
       setStats(dashboard.summary as any);
       setWpmHistory(dashboard.last30Days as any);
@@ -152,107 +181,173 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-10 flex flex-col gap-10 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-correct">
-            {user ? `Hey, ${user.username}` : 'Dashboard'}
+          <h1 className="text-2xl font-bold tracking-tight
+                         text-slate-900 dark:text-white">
+            {user ? `Hey, ${user.username} 👋` : 'Dashboard'}
           </h1>
-          <p className="text-muted text-sm mt-1 font-mono">
-            {isGuest ? 'Sign in to save your progress' : 'Your typing intelligence report'}
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-mono">
+            {isGuest
+              ? 'Sign in to save your progress'
+              : 'Your typing intelligence report'}
           </p>
         </div>
-        <Link href="/practice" id="go-practice-btn"
-          className="bg-violet hover:bg-violet/85 text-white font-mono text-sm
-                     px-5 py-2.5 rounded-xl transition-all duration-150 active:scale-95">
-          Practice →
+
+        {/* Premium Practice button */}
+        <Link
+          href="/practice"
+          id="go-practice-btn"
+          className={[
+            'flex items-center gap-2 shrink-0',
+            'bg-purple-600 hover:bg-purple-500 dark:bg-purple-600 dark:hover:bg-purple-500',
+            'text-white font-semibold text-sm',
+            'px-5 py-2.5 rounded-xl',
+            'shadow-purple-glow/30 hover:shadow-purple-glow',
+            'transition-all duration-200',
+            'hover:-translate-y-0.5 active:scale-95 active:translate-y-0',
+          ].join(' ')}
+        >
+          Practice
+          <ArrowRight size={15} strokeWidth={2.5} />
         </Link>
       </div>
 
-      {/* Guest banner */}
+      {/* ── Guest banner ───────────────────────────────────────────────────── */}
       {isGuest && (
-        <div className="glass border border-violet/20 rounded-2xl px-6 py-4 flex items-center
-                        justify-between gap-4">
-          <p className="text-sm text-muted font-mono">
+        <div className="flex items-center justify-between gap-4 rounded-2xl px-6 py-4
+                        bg-purple-50 border border-purple-100
+                        dark:bg-purple-900/10 dark:border-purple-500/20">
+          <p className="text-sm text-purple-700 dark:text-purple-300 font-mono">
             ⚡ You're in guest mode. Sign in to sync stats and earn XP.
           </p>
           <Link href="/login"
-            className="text-violet-light text-sm font-mono underline underline-offset-2
-                       hover:text-correct transition-colors whitespace-nowrap">
+            className="text-purple-600 dark:text-purple-400 text-sm font-mono font-semibold
+                       underline underline-offset-2 hover:text-purple-500 transition-colors whitespace-nowrap">
             Sign in →
           </Link>
         </div>
       )}
 
+      {/* ── Error banner ───────────────────────────────────────────────────── */}
       {error && (
-        <div className="bg-incorrect/10 border border-incorrect/30 text-incorrect
-                        text-sm px-4 py-3 rounded-xl font-mono" role="alert">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-600
+                        dark:bg-red-900/10 dark:border-red-500/20 dark:text-red-400
+                        text-sm px-4 py-3 rounded-xl font-mono flex items-center gap-3"
+             role="alert">
+          <span className="flex-1">{error}</span>
+          <button onClick={fetchData}
+            className="flex items-center gap-1 text-xs underline opacity-70 hover:opacity-100">
+            <RefreshCw size={12} /> retry
+          </button>
         </div>
       )}
 
-      {/* XP bar */}
+      {/* ── XP / Rank bar ──────────────────────────────────────────────────── */}
       {user && stats && (
-        <div className="glass-subtle rounded-2xl p-6">
+        <PanelCard>
           <XpBar xp={stats.xp} rank={stats.rank as UserRank} />
-        </div>
+        </PanelCard>
       )}
 
-      {/* Stats grid */}
+      {/* ── Performance stats grid ─────────────────────────────────────────── */}
       <Section title="Performance" id="stats-section">
+        {/* Top row — 4 cols */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {isLoading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />) : stats ? (
-            <>
-              <StatCard id="stat-avg-wpm"   label="Avg WPM"   value={stats.avgWpm}               unit="wpm" icon="⚡" />
-              <StatCard id="stat-best-wpm"  label="Best WPM"  value={stats.bestWpm}              unit="wpm" accent="#34d399" icon="🏆" />
-              <StatCard id="stat-accuracy"  label="Accuracy"  value={`${stats.avgAccuracy}%`}    icon="🎯" />
-              <StatCard id="stat-sessions"  label="Sessions"  value={stats.totalSessions}
-                sub={`${formatTime(stats.totalTimeMs)} total`}                                   icon="📊" />
-            </>
-          ) : Array.from({ length: 4 }).map((_, i) => (
-            <StatCard key={i} label={['Avg WPM','Best WPM','Accuracy','Sessions'][i]} value="—" />
-          ))}
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)
+            : stats ? (
+              <>
+                <StatCard
+                  id="stat-avg-wpm"
+                  label="Avg WPM"
+                  value={stats.avgWpm}
+                  unit="wpm"
+                  icon={<Zap size={15} strokeWidth={2} />}
+                />
+                <StatCard
+                  id="stat-best-wpm"
+                  label="Best WPM"
+                  value={stats.bestWpm}
+                  unit="wpm"
+                  accent="#16a34a"
+                  icon={<Trophy size={15} strokeWidth={2} />}
+                />
+                <StatCard
+                  id="stat-accuracy"
+                  label="Accuracy"
+                  value={`${stats.avgAccuracy}%`}
+                  icon={<Target size={15} strokeWidth={2} />}
+                />
+                <StatCard
+                  id="stat-sessions"
+                  label="Sessions"
+                  value={stats.totalSessions}
+                  sub={`${formatTime(stats.totalTimeMs)} total`}
+                  icon={<BarChart3 size={15} strokeWidth={2} />}
+                />
+              </>
+            ) : (
+              Array.from({ length: 4 }).map((_, i) => (
+                <StatCard key={i} label={['Avg WPM','Best WPM','Accuracy','Sessions'][i]} value="—" />
+              ))
+            )}
         </div>
+
+        {/* Bottom row — 2 cols */}
         <div className="grid grid-cols-2 gap-4">
           {!isLoading && stats && (
             <>
-              <StatCard id="stat-streak" label="Day Streak" value={stats.streakDays}
-                unit="days" accent="#fbbf24" icon="🔥"
-                sub={stats.streakDays >= 7 ? '7-day goal reached!' : `${7 - stats.streakDays} more for badge`} />
-              <StatCard id="stat-raw-wpm" label="Raw WPM"  value={stats.avgRawWpm}
-                unit="wpm" sub="unpenalized speed"                   icon="⌨️" />
+              <StatCard
+                id="stat-streak"
+                label="Day Streak"
+                value={stats.streakDays}
+                unit="days"
+                accent="#d97706"
+                icon={<Flame size={15} strokeWidth={2} />}
+                sub={stats.streakDays >= 7
+                  ? '🎯 7-day goal reached!'
+                  : `${7 - stats.streakDays} more days for badge`}
+              />
+              <StatCard
+                id="stat-raw-wpm"
+                label="Raw WPM"
+                value={stats.avgRawWpm}
+                unit="wpm"
+                sub="unpenalized speed"
+                icon={<KeyboardIcon size={15} strokeWidth={2} />}
+              />
             </>
           )}
         </div>
       </Section>
 
-      {/* WPM chart */}
+      {/* ── WPM chart ──────────────────────────────────────────────────────── */}
       <Section title="WPM Progression" id="chart-section">
-        <div className="glass-subtle rounded-2xl p-6">
+        <PanelCard>
           {isLoading ? <Skeleton className="h-64" /> : (
             <div style={{ height: 260 }}>
               <WpmChart data={wpmHistory} bestWpm={stats?.bestWpm ?? 0} />
             </div>
           )}
-        </div>
+        </PanelCard>
       </Section>
 
-      {/* ── Keyboard Heatmap (SVG engine reused from Phase 2) ── */}
+      {/* ── Key Intelligence Heatmap ───────────────────────────────────────── */}
       <Section title="Key Intelligence Heatmap" id="heatmap-section">
-        <div className="glass-subtle rounded-2xl p-6 flex flex-col gap-2">
-          <p className="text-muted text-xs font-mono">
+        <PanelCard>
+          <p className="text-slate-500 dark:text-slate-500 text-xs font-mono mb-1">
             Per-key analytics from all your sessions. Hover any key for exact stats.
           </p>
-
-          {/* The SAME <Keyboard /> component used in the typing arena.
-              controlsSlot injects heatmap-specific toggles instead of live controls.
-              The SVG rendering engine (Key → Row → Keyboard) is 100% reused. */}
           <Keyboard
             className="w-full"
             controlsSlot={<HeatmapControls />}
           />
-        </div>
+        </PanelCard>
       </Section>
+
     </div>
   );
 }
