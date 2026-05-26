@@ -10,25 +10,27 @@ const config: Config = {
         sans:  ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // Core surface palette
+        // ── Surface palette — wired to CSS variables in globals.css ──────────
+        // Each token resolves to var(--surface-N), which switches value between
+        // the :root (light) and html.dark blocks when next-themes toggles the class.
         surface: {
-          DEFAULT: '#0d0d14',
-          1: '#13131f',
-          2: '#1a1a2e',
-          3: '#22223b',
+          DEFAULT: 'var(--surface-0)',
+          1:       'var(--surface-1)',
+          2:       'var(--surface-2)',
+          3:       'var(--surface-3)',
         },
-        // Brand
+        // Brand (same in both themes — violet is violet)
         violet: {
-          DEFAULT: '#7c3aed',
-          light:   '#a78bfa',
+          DEFAULT: 'var(--violet)',
+          light:   'var(--violet-light)',
           dim:     '#4c1d95',
         },
-        // Typing states
-        correct:   '#e2e8f0',
-        incorrect: '#f87171',
-        untyped:   '#3d3d5c',
-        caret:     '#a78bfa',
-        // Status
+        // Typing states — switch between light/dark text and error colours
+        correct:   'var(--correct)',
+        incorrect: 'var(--incorrect)',
+        untyped:   'var(--untyped)',
+        caret:     'var(--caret-color)',
+        // Status (static — no theme difference needed)
         success:   '#34d399',
         warning:   '#fbbf24',
         error:     '#f87171',

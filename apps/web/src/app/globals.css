@@ -4,8 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── CSS Custom Properties ────────────────────────────────────────────────── */
+/* ─── CSS Custom Properties ─────────────────────────────────────────────────
+   Light mode (default) — active when next-themes removes the .dark class.
+   Dark  mode           — active when next-themes adds   the .dark class.
+   All Tailwind color tokens (bg-surface, text-correct, etc.) reference these
+   CSS variables via tailwind.config.ts, so both themes work automatically.
+────────────────────────────────────────────────────────────────────────────── */
+
+/* LIGHT MODE — default (no class required) */
 :root {
+  --surface-0:     #f8f9fc;
+  --surface-1:     #f1f3f8;
+  --surface-2:     #e8ecf4;
+  --surface-3:     #d8dff0;
+  --violet:        #7c3aed;
+  --violet-light:  #6d28d9;
+  --violet-dim:    rgba(124, 58, 237, 0.10);
+  --correct:       #1e1e2e;    /* dark text on light bg */
+  --incorrect:     #dc2626;
+  --untyped:       #94a3b8;
+  --caret-color:   #7c3aed;
+  --caret-w:       2px;
+  --caret-h:       1.4em;
+}
+
+/* DARK MODE — active when html.dark (set by next-themes) */
+html.dark {
   --surface-0:     #0d0d14;
   --surface-1:     #13131f;
   --surface-2:     #1a1a2e;
@@ -17,8 +41,6 @@
   --incorrect:     #f87171;
   --untyped:       #3d3d5c;
   --caret-color:   #a78bfa;
-  --caret-w:       2px;
-  --caret-h:       1.4em;
 }
 
 /* ─── Base Reset ────────────────────────────────────────────────────────────── */
@@ -26,6 +48,7 @@
 
 html {
   font-family: 'Inter', system-ui, sans-serif;
+  /* Uses the CSS variable — responds to both :root (light) and html.dark */
   background-color: var(--surface-0);
   color: var(--correct);
   -webkit-font-smoothing: antialiased;
