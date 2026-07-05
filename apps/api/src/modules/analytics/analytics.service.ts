@@ -5,11 +5,13 @@ export async function getDashboardData(userId: string) {
   const [statsResult, historyResult] = await Promise.all([
     // Denormalized stats row — instant read
     pool.query(
-      `SELECT total_sessions, avg_wpm, best_wpm, avg_raw_wpm,
-              avg_accuracy, avg_consistency, total_time_ms,
-              xp, rank, streak_days, last_activity_at
-       FROM user_statistics
-       WHERE user_id = $1`,
+      `SELECT us.total_sessions, us.avg_wpm, us.best_wpm, us.avg_raw_wpm,
+              us.avg_accuracy, us.avg_consistency, us.total_time_ms,
+              us.streak_days, us.last_activity_at,
+              u.xp, u.level
+       FROM user_statistics us
+       JOIN users u ON u.id = us.user_id
+       WHERE us.user_id = $1`,
       [userId],
     ),
     // Last 30 sessions for WPM progression chart
@@ -31,7 +33,7 @@ export async function getDashboardData(userId: string) {
 
   const stats = statsResult.rows[0] ?? {
     total_sessions: 0, avg_wpm: 0, best_wpm: 0, avg_accuracy: 0,
-    streak_days: 0, xp: 0, rank: 'bronze',
+    streak_days: 0, xp: 0, level: 1,
   };
 
   return {
@@ -45,7 +47,7 @@ export async function getDashboardData(userId: string) {
       totalTimeMs:   stats.total_time_ms ?? 0,
       streakDays:    stats.streak_days,
       xp:            stats.xp,
-      rank:          stats.rank,
+      rank:          `Level ${stats.level}`, // Map level to the UI rank field
     },
     wpmHistory: historyResult.rows.map((r) => ({
       sessionIndex: Number(r.session_index),

@@ -202,7 +202,9 @@ function LearnContent() {
     if (!chapter || chapter.type !== 'test') {
       // Non-test chapters always "pass" — mark complete immediately
       if (chapter && tokens?.accessToken) {
-        await safeMarkComplete(chapterId, 'easy', results.wpm, results.accuracy);
+        const roundedWpm = Math.round(results.wpm);
+        const roundedAcc = Math.round(results.accuracy);
+        await safeMarkComplete(chapterId, 'easy', roundedWpm, roundedAcc);
       }
       return;
     }
@@ -212,20 +214,23 @@ function LearnContent() {
     const reqWpm      = Math.round((chapter.basePassingWpm ?? 0) * mod.wpmMultiplier);
     const reqAccuracy = mod.accuracyReq;
 
-    const passed = results.wpm >= reqWpm && results.accuracy >= reqAccuracy;
+    const achievedWpm = Math.round(results.wpm);
+    const achievedAcc = Math.round(results.accuracy);
+
+    const passed = achievedWpm >= reqWpm && achievedAcc >= reqAccuracy;
 
     if (passed) {
       setToast({
         type:    'pass',
-        message: `Chapter ${chapterId} passed! ${results.wpm} WPM · ${results.accuracy}% acc ✓`,
+        message: `Chapter ${chapterId} passed! ${achievedWpm} WPM · ${achievedAcc}% acc ✓`,
       });
       if (tokens?.accessToken) {
-        await safeMarkComplete(chapterId, difficulty, results.wpm, results.accuracy);
+        await safeMarkComplete(chapterId, difficulty, achievedWpm, achievedAcc);
       }
     } else {
       setToast({
         type:    'fail',
-        message: `${results.wpm} WPM / ${results.accuracy}% — need ${reqWpm} WPM / ${reqAccuracy}%. Try again!`,
+        message: `${achievedWpm} WPM / ${achievedAcc}% — need ${reqWpm} WPM / ${reqAccuracy}%. Try again!`,
       });
     }
 
