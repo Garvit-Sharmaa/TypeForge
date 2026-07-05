@@ -28,7 +28,7 @@ import TypingArena                     from '@/components/typing/TypingArena';
 import ForgePanel                      from '@/components/typing/ForgePanel';
 import { useTypingStore, selectStatus } from '@/store/typingStore';
 import { useUserStore, selectTokens }   from '@/store/userStore';
-import { analyticsApi }                 from '@/lib/api';
+import { useAnalyticsStore }            from '@/store/analyticsStore';
 import { useAcademyProgress }           from '@/hooks/useAcademyProgress';
 
 // ─── Drill word generation ────────────────────────────────────────────────────
@@ -132,25 +132,24 @@ function PracticeContent() {
   // Must be called here (not in /learn) because /learn is unmounted during the session.
   useAcademyProgress();
 
-  // ── Session tracking for ForgePanel "Today" badge ──────────────────────────
-  const [sessionCount, setSessionCount] = useState(0);
-  const [xpToday,      setXpToday]      = useState(0);
-  const prevStatus = useRef(status);
+  // ── Today's Forge stats from analyticsStore (persists across navigation) ──────
+  // Using the store means sessionCount/xpToday survive a visit to /academy and back.
+  // addTodaySession auto-resets counts at midnight.
+  const todaySessions    = useAnalyticsStore((s) => s.todaySessions);
+  const todayXp          = useAnalyticsStore((s) => s.todayXp);
+  const addTodaySession  = useAnalyticsStore((s) => s.addTodaySession);
 
+  const prevStatus = useRef(status);
   useEffect(() => {
     if (prevStatus.current === 'running' && status === 'finished') {
-      setSessionCount((n) => n + 1);
-      // XP is approximated locally as WPM-based gain (real XP comes from
-      // session submission; this gives an optimistic instant feel)
-      const store   = useTypingStore.getState();
-      const results = store.results;
-      if (results) {
-        const xpEarned = Math.round(results.wpm * 0.8 + results.accuracy * 0.5);
-        setXpToday((x) => x + xpEarned);
-      }
+      const results = useTypingStore.getState().results;
+      const xpEarned = results
+        ? Math.round(results.wpm * 0.8 + results.accuracy * 0.5)
+        : 0;
+      addTodaySession(xpEarned);
     }
     prevStatus.current = status;
-  }, [status]);
+  }, [status, addTodaySession]);
 
   // ── Drill launcher ─────────────────────────────────────────────────────────
   const [isLaunching, setIsLaunching] = useState(false);
@@ -193,8 +192,8 @@ function PracticeContent() {
       <ForgePanel
         onLaunchDrill={handleLaunchDrill}
         isLaunching={isLaunching}
-        sessionCount={sessionCount}
-        xpToday={xpToday}
+        sessionCount={todaySessions}
+        xpToday={todayXp}
       />
 
       {/* ── Main Arena ──────────────────────────────────────────────────────── */}

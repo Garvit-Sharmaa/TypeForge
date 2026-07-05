@@ -89,6 +89,29 @@ function NavHeader() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const isHydrated = useUserStore((s) => s.isHydrated);
+
+  // ── Pre-hydration gate ────────────────────────────────────────────────
+  // Zustand reads localStorage asynchronously after the first render. Until
+  // isHydrated flips to true (~10ms), the store has user=null and tokens=null.
+  // Without this guard, any component that reads `isAuthenticated` will briefly
+  // see "false" and may redirect to /login or show a "sign in" button even for
+  // authenticated users — the classic "auth flicker".
+  //
+  // We render a full-screen spinner instead of the layout shell. The spinner
+  // is identical to the one used in individual page Suspense fallbacks, so the
+  // user sees a single, consistent loading state that resolves in <100ms.
+  if (!isHydrated) {
+    return (
+      <div className="min-h-dvh bg-surface flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-violet/40 border-t-violet animate-spin" />
+          <span className="text-[11px] font-mono text-untyped/60">Loading…</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-surface flex flex-col">
       <NavHeader />
