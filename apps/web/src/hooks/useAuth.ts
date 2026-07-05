@@ -133,6 +133,16 @@ export function useAuth() {
     router.push('/login');
   }, [storeLogout, router]);
 
+  // ── Global 401 Listener ───────────────────────────────────────────────────
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      console.warn('[useAuth] Global 401 received. Forcing logout.');
+      logout();
+    };
+    window.addEventListener('auth:401', handleUnauthorized);
+    return () => window.removeEventListener('auth:401', handleUnauthorized);
+  }, [logout]);
+
   return {
     user,
     tokens,

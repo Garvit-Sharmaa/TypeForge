@@ -48,6 +48,13 @@ export async function apiFetch<T = unknown>(
   }));
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Global 401 interceptor: broadcast event to force logout in useAuth
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:401'));
+      }
+    }
+
     throw new ApiError(
       body?.error?.message ?? `HTTP ${response.status}`,
       response.status,

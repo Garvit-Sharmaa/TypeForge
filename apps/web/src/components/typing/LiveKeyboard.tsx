@@ -14,7 +14,7 @@
  *   3. DEFAULT  — all other keys → dim, recessed appearance
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // ── QWERTY layout matrix ──────────────────────────────────────────────────────
 // Each row is an array of { char, widthClass }.
@@ -87,8 +87,6 @@ export interface LiveKeyboardProps {
   mode:        'lesson' | 'practice';
   /** Full cumulative allowed key set for the current lesson (lowercase chars) */
   allowedKeys: string[];
-  /** The hardware key currently held down (e.key.toLowerCase()), or null */
-  activeKey:   string | null;
 }
 
 // ── Individual key cap ────────────────────────────────────────────────────────
@@ -175,8 +173,25 @@ const KeyCap = React.memo(function KeyCap({ keyDef, isAllowed, isPressed }: KeyC
 const LiveKeyboard = React.memo(function LiveKeyboard({
   mode,
   allowedKeys,
-  activeKey,
 }: LiveKeyboardProps) {
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.key === 'Tab') return;
+      setActiveKey(e.key.toLowerCase());
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      setActiveKey((prev) => (prev === e.key.toLowerCase() ? null : prev));
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup',   onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup',   onKeyUp);
+    };
+  }, []);
   // Build a Set for O(1) lookup — memoized so it only rebuilds when allowedKeys changes
   const allowedSet = React.useMemo(
     () => new Set(allowedKeys.map((k) => k.toLowerCase())),

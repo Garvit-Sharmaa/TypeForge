@@ -184,34 +184,6 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
   // Tracks whether we are awaiting a lesson regeneration (Tab restart in lesson mode)
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  // ── Ghost Keyboard: track the physical key currently held down ─────────────
-  // This state updates on every keydown/keyup. It is LOCAL — it does NOT go
-  // into Zustand. React batches the setState so it never blocks the typing engine.
-  // We deliberately skip e.repeat so held keys don't re-fire the flash.
-  const [activeKey, setActiveKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // Skip auto-repeat (key held) — we only want the initial press flash
-      if (e.repeat) return;
-      // Tab is handled by the restart listener below; skip it here to avoid
-      // `activeKey = 'tab'` flickering during a restart.
-      if (e.key === 'Tab') return;
-      setActiveKey(e.key.toLowerCase());
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      // Only clear if the key being released is the one we tracked.
-      // This prevents Shift+key combos from leaving a stale activeKey.
-      setActiveKey((prev) => (prev === e.key.toLowerCase() ? null : prev));
-    };
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup',   onKeyUp);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup',   onKeyUp);
-    };
-  }, []); // empty deps — listeners are stable, no stale closure risk
-
   // ── Session submission (fires automatically on status → 'finished') ─────────
   useSessionSubmit();
   // ── Phase 2: keyboard visual bridge ────────────────────────────────────────
@@ -373,7 +345,6 @@ export default function TypingArena({ lessonId }: { lessonId?: string }) {
         <LiveKeyboard
           mode={isLesson ? 'lesson' : 'practice'}
           allowedKeys={isLesson ? (config.allowedKeys ?? []) : []}
-          activeKey={activeKey}
         />
       </div>
 
