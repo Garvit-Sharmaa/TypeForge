@@ -30,6 +30,31 @@ const PRIORITY_FILL = {
 };
 
 // ── Color scale helpers ───────────────────────────────────────────────────────
+function getLuminance(r: number, g: number, b: number) {
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+
+function parseRgb(color: string) {
+  if (color.startsWith('#')) {
+    const hex = color.replace('#', '');
+    return {
+      r: parseInt(hex.substring(0, 2), 16),
+      g: parseInt(hex.substring(2, 4), 16),
+      b: parseInt(hex.substring(4, 6), 16),
+    };
+  }
+  const match = color.match(/rgb\((\d+),(\d+),(\d+)\)/);
+  if (match) {
+    return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
+  }
+  return { r: 0, g: 0, b: 0 };
+}
+
+function getContrastColor(fillColor: string | undefined) {
+  if (!fillColor) return undefined;
+  const { r, g, b } = parseRgb(fillColor);
+  return getLuminance(r, g, b) > 0.5 ? '#0f172a' : '#ffffff'; // slate-900 or white
+}
 function lerp(a: number, b: number, t: number) {
   return Math.round(a + (b - a) * Math.min(1, Math.max(0, t)));
 }
@@ -125,40 +150,55 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
   // ── Fill colour resolution ────────────────────────────────────────────────
   const kd = heatmapData[id];
 
-  const fillColor: string = (() => {
+  const dynamicFill: string | undefined = (() => {
     // Heatmap mode: completely overrides live state colour
     if (heatmapEnabled && kd) {
       return heatmapMode === 'speed'
         ? speedFill(kd.avgLatencyMs, kd.sampleCount)
         : accuracyFill(kd.errorRate, kd.sampleCount);
     }
-    if (heatmapEnabled) return '#1e1e36'; // no data for this key
+    if (heatmapEnabled) return undefined; // Let CSS handle empty heatmap key
 
     // Live typing mode: priority-driven colours
     if (priority === 'incorrect') return PRIORITY_FILL.incorrect;
     if (priority === 'pressed')   return PRIORITY_FILL.pressed;
     if (priority === 'target')    return PRIORITY_FILL.target;
 
-    return showFingerColors
-      ? (FINGER_FILL_DARK[finger] ?? '#1a1a2e')
-      : '#1a1a2e';
+    return showFingerColors ? FINGER_FILL_DARK[finger] : undefined;
   })();
 
-  // Stroke & label colours
-  const strokeColor =
-    priority === 'incorrect' ? '#f87171' :
-    priority === 'target'    ? '#7c3aed' :
-    priority === 'pressed'   ? '#a78bfa' :
-    heatmapEnabled           ? 'rgba(255,255,255,0.04)' :
-                               'rgba(255,255,255,0.06)';
+  // Stroke colours
+  let strokeColor: string | undefined = undefined;
+  let strokeClassName = "";
+  
+  if (priority === 'incorrect') strokeColor = '#f87171';
+  else if (priority === 'target') strokeColor = '#7c3aed';
+  else if (priority === 'pressed') strokeColor = '#a78bfa';
+  else if (heatmapEnabled) strokeColor = 'rgba(255,255,255,0.04)';
+  else {
+    // Idle state - use Tailwind classes
+    strokeClassName = "stroke-slate-200 dark:stroke-white/5";
+  }
 
   const strokeWidth = priority === 'target' ? 1.5 : 1;
 
-  const labelColor =
-    priority === 'incorrect' ? '#f87171' :
-    priority === 'idle'      ? (isModifier ? '#3a3a5c' : '#5a5a7a') :
-    heatmapEnabled           ? '#9090b0' :
-    '#e2e8f0';
+  let labelColor: string | undefined = undefined;
+  let labelClassName = "";
+
+  if (heatmapEnabled && kd) {
+    labelColor = getContrastColor(dynamicFill);
+  } else if (priority === 'incorrect') {
+    labelColor = '#f87171';
+  } else if (heatmapEnabled) {
+    labelColor = '#9090b0';
+  } else if (priority === 'idle') {
+    // Tailwind dynamic text colors for Light/Dark mode
+    labelClassName = isModifier 
+      ? "fill-slate-500 dark:fill-[#5a5a7a]" 
+      : "fill-slate-700 dark:fill-slate-300";
+  } else {
+    labelColor = '#e2e8f0'; // target/pressed
+  }
 
   const fontSize = width > 80 ? 10 : width > 60 ? 11 : 12;
 
@@ -195,7 +235,12 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
         {/* Key body */}
         <motion.rect
           x={-hw} y={-hh} width={width} height={height} rx={rx}
-          animate={{ fill: fillColor }}
+          className={
+            dynamicFill 
+              ? strokeClassName 
+              : `fill-white drop-shadow-sm hover:fill-slate-50 dark:fill-[#161f30] dark:hover:fill-[#1e293b] ${strokeClassName}`
+          }
+          animate={{ fill: dynamicFill || "" }}
           transition={{ duration: isHeatmapStatic ? 0.35 : 0.09 }}
           stroke={strokeColor}
           strokeWidth={strokeWidth}
@@ -255,6 +300,7 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
           textAnchor="middle" dominantBaseline="middle"
           fontSize={fontSize}
           fill={labelColor}
+          className={labelClassName}
           fontFamily="'JetBrains Mono', monospace"
           fontWeight="500"
           style={{ pointerEvents: 'none', userSelect: 'none' }}

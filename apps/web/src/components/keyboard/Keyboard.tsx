@@ -93,7 +93,7 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
   return (
     <div
       ref={wrapperRef}
-      className={className}
+      className={`rounded-xl p-2 bg-slate-100/50 border border-slate-200 dark:bg-slate-900/50 dark:border-white/5 ${className ?? ''}`}
       style={{ position: 'relative' }}
       onMouseMove={heatmapEnabled ? handleMouseMove : undefined}
     >
@@ -105,7 +105,7 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
         style={{ display: 'block', maxWidth: layout.viewBoxWidth }}
       >
         <rect x={0} y={0} width={layout.viewBoxWidth} height={layout.viewBoxHeight}
-          rx={10} fill="#13131f" />
+          rx={10} className="fill-transparent" />
         {layout.rows.map((rowDef) => (
           <Row key={rowDef.id} rowDef={rowDef} />
         ))}
