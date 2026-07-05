@@ -329,7 +329,8 @@ function LearnContent() {
       const reqWpm = isTest ? Math.round((chapter.basePassingWpm ?? 0) * mod.wpmMultiplier) : 0;
       const reqAcc = isTest ? mod.accuracyReq : 0;
 
-      router.push(`/practice?lessonId=${encodeURIComponent(payload.lessonId)}&nextRoute=${encodeURIComponent(nextRoute)}&reqWpm=${reqWpm}&reqAcc=${reqAcc}`);
+      router.push(`/practice?lessonId=${encodeURIComponent(payload.lessonId)}&isAcademy=1&nextRoute=${encodeURIComponent(nextRoute)}&reqWpm=${reqWpm}&reqAcc=${reqAcc}`);
+
     } catch (err: any) {
       setSessionError(err.message ?? 'Failed to start chapter. Please try again.');
       pendingChapterIdRef.current  = null;
@@ -379,7 +380,7 @@ function LearnContent() {
           </h1>
         </div>
         <p className="text-muted text-sm mt-1 font-mono">
-          4 lessons · {allChapterCount} chapters · complete each lesson's Boss Test to advance.
+          {curriculum.length} lessons · {allChapterCount} chapters · complete each lesson's Boss Test to advance.
         </p>
 
         {/* Global progress bar */}

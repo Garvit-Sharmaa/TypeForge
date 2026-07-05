@@ -86,12 +86,13 @@ const ChapterRow = memo(function ChapterRow({
       id={`chapter-row-${chapter.id}`}
       className={[
         'relative flex items-center gap-3 px-4 py-3 rounded-xl',
-        'border transition-all duration-150',
-        // Final Boss gets a special gradient border treatment
+        'border transition-all duration-200',
+        // Final Boss gradient border
         isTest && !isDone && !isLocked
           ? 'border-rose-500/30 bg-gradient-to-r from-rose-500/8 via-amber-500/5 to-transparent'
           : isDone
-            ? 'border-surface-3/40 bg-surface-2/30'
+            // Completed: green-tinted with soft glow
+            ? 'border-correct/20 bg-correct/5 shadow-[0_0_12px_rgba(52,211,153,0.06)]'
             : 'border-surface-3/50 bg-surface-2/50',
         isLocked ? 'opacity-40' : '',
         canAct   ? 'cursor-pointer hover:border-surface-3 hover:bg-surface-2/80 group' : '',
@@ -137,7 +138,10 @@ const ChapterRow = memo(function ChapterRow({
             ~{chapter.estimatedMinutes} min
           </span>
           {isDone && (
-            <span className="text-[9px] font-mono text-correct/50 ml-2">completed</span>
+            <span className="text-[9px] font-mono text-correct/60 ml-2 flex items-center gap-0.5">
+              <span className="w-1 h-1 rounded-full bg-correct/60 inline-block" />
+              completed
+            </span>
           )}
         </div>
       </div>
@@ -145,7 +149,13 @@ const ChapterRow = memo(function ChapterRow({
       {/* Right: status / CTA */}
       <div className="shrink-0">
         {isDone ? (
-          <CheckCircle2 size={16} className="text-correct/50" strokeWidth={2} />
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          >
+            <CheckCircle2 size={16} className="text-correct" strokeWidth={2} />
+          </motion.div>
         ) : isLocked ? (
           <span className="text-[9px] font-mono text-untyped/40">locked</span>
         ) : isStarting ? (
