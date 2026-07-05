@@ -117,8 +117,9 @@ function LearnContent() {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   // ── Difficulty used in the last launched test (for pass/fail eval) ───────
-  const pendingDifficultyRef = useRef<Difficulty | null>(null);
-  const pendingChapterIdRef  = useRef<string | null>(null);
+  // NOTE: pendingChapterIdRef and pendingDifficultyRef were removed.
+  // Chapter progress is now marked by useAcademyProgress() inside /practice,
+  // which is the page actually mounted when the session finishes.
 
   // ── Build curriculum from progress ──────────────────────────────────────
   const curriculum = buildCurriculum(completedIds);
@@ -170,103 +171,6 @@ function LearnContent() {
     prevUserIdRef.current = currentId;
   }, [user?.id]);
 
-  // ── Listen for session finish to evaluate pass/fail ──────────────────────
-  const prevStatus = useRef(useTypingStore.getState().status);
-  useEffect(() => {
-    const unsub = useTypingStore.subscribe(
-      (s) => s.status,
-      (status) => {
-        if (prevStatus.current === 'running' && status === 'finished') {
-          void evaluateResult();
-        }
-        prevStatus.current = status;
-      },
-    );
-    return unsub;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tokens]);
-
-  async function evaluateResult() {
-    const chapterId  = pendingChapterIdRef.current;
-    const difficulty = pendingDifficultyRef.current;
-    if (!chapterId || !difficulty) return;
-
-    const results = useTypingStore.getState().results;
-    if (!results) return;
-
-    // Find chapter in curriculum
-    const chapter = curriculum
-      .flatMap((l) => l.chapters)
-      .find((ch) => ch.id === chapterId);
-
-    if (!chapter || chapter.type !== 'test') {
-      // Non-test chapters always "pass" — mark complete immediately
-      if (chapter && tokens?.accessToken) {
-        const roundedWpm = Math.round(results.wpm);
-        const roundedAcc = Math.round(results.accuracy);
-        await safeMarkComplete(chapterId, 'easy', roundedWpm, roundedAcc);
-      }
-      return;
-    }
-
-    // Test: check against difficulty thresholds
-    const mod         = DifficultyModifiers[difficulty];
-    const reqWpm      = Math.round((chapter.basePassingWpm ?? 0) * mod.wpmMultiplier);
-    const reqAccuracy = mod.accuracyReq;
-
-    const achievedWpm = Math.round(results.wpm);
-    const achievedAcc = Math.round(results.accuracy);
-
-    const passed = achievedWpm >= reqWpm && achievedAcc >= reqAccuracy;
-
-    if (passed) {
-      setToast({
-        type:    'pass',
-        message: `Chapter ${chapterId} passed! ${achievedWpm} WPM · ${achievedAcc}% acc ✓`,
-      });
-      if (tokens?.accessToken) {
-        await safeMarkComplete(chapterId, difficulty, achievedWpm, achievedAcc);
-      }
-    } else {
-      setToast({
-        type:    'fail',
-        message: `${achievedWpm} WPM / ${achievedAcc}% — need ${reqWpm} WPM / ${reqAccuracy}%. Try again!`,
-      });
-    }
-
-    // Clear pending refs
-    pendingChapterIdRef.current  = null;
-    pendingDifficultyRef.current = null;
-  }
-
-  async function safeMarkComplete(
-    chapterId:  string,
-    difficulty: Difficulty,
-    wpm:        number,
-    accuracy:   number,
-  ) {
-    // Optimistic local update (instant UI unlock)
-    setCompletedIds((prev) => new Set([...prev, chapterId]));
-
-    try {
-      if (tokens?.accessToken) {
-        await lessonsApi.markProgress(
-          { chapterId, difficulty, wpmAchieved: wpm, accuracyAchieved: accuracy },
-          tokens.accessToken,
-        );
-      }
-      // Force Next.js cache invalidation
-      router.refresh();
-    } catch (err: any) {
-      console.error('[Academy] markProgress failed:', err.message);
-      // Revert optimistic update on failure
-      setCompletedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(chapterId);
-        return next;
-      });
-    }
-  }
 
   // ── Chapter start handler ────────────────────────────────────────────────
   const handleChapterStart = useCallback((chapter: Chapter, lesson: Lesson) => {
@@ -294,9 +198,8 @@ function LearnContent() {
     setIsLaunching(true);
     setSessionError('');
 
-    // Store refs for post-session evaluation
-    pendingChapterIdRef.current  = chapter.id;
-    pendingDifficultyRef.current = difficulty;
+    // chapterId and difficulty are now passed as URL params to /practice
+    // and evaluated by useAcademyProgress() hook — no local refs needed.
 
     try {
       const payload = await lessonsApi.generate(chapter.lessonConfigId, tokens.accessToken);
@@ -329,12 +232,19 @@ function LearnContent() {
       const reqWpm = isTest ? Math.round((chapter.basePassingWpm ?? 0) * mod.wpmMultiplier) : 0;
       const reqAcc = isTest ? mod.accuracyReq : 0;
 
-      router.push(`/practice?lessonId=${encodeURIComponent(payload.lessonId)}&isAcademy=1&nextRoute=${encodeURIComponent(nextRoute)}&reqWpm=${reqWpm}&reqAcc=${reqAcc}`);
+      router.push(
+        `/practice?lessonId=${encodeURIComponent(payload.lessonId)}` +
+        `&isAcademy=1` +
+        `&chapterId=${encodeURIComponent(chapter.id)}` +
+        `&difficulty=${encodeURIComponent(difficulty)}` +
+        `&nextRoute=${encodeURIComponent(nextRoute)}` +
+        `&reqWpm=${reqWpm}` +
+        `&reqAcc=${reqAcc}`,
+      );
+
 
     } catch (err: any) {
       setSessionError(err.message ?? 'Failed to start chapter. Please try again.');
-      pendingChapterIdRef.current  = null;
-      pendingDifficultyRef.current = null;
     } finally {
       setStartingId(null);
       setIsLaunching(false);

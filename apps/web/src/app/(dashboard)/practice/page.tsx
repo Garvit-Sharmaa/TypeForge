@@ -29,6 +29,7 @@ import ForgePanel                      from '@/components/typing/ForgePanel';
 import { useTypingStore, selectStatus } from '@/store/typingStore';
 import { useUserStore, selectTokens }   from '@/store/userStore';
 import { analyticsApi }                 from '@/lib/api';
+import { useAcademyProgress }           from '@/hooks/useAcademyProgress';
 
 // ─── Drill word generation ────────────────────────────────────────────────────
 // We generate a focused drill by calling analyticsApi.weakKeys and then
@@ -125,6 +126,11 @@ function PracticeContent() {
   const tokens      = useUserStore(selectTokens);
   const status      = useTypingStore(selectStatus);
   const initSession = useTypingStore((s) => s.initSession);
+
+  // ── Academy chapter progress ──────────────────────────────────────────
+  // Marks chapter complete when session finishes while /practice is mounted.
+  // Must be called here (not in /learn) because /learn is unmounted during the session.
+  useAcademyProgress();
 
   // ── Session tracking for ForgePanel "Today" badge ──────────────────────────
   const [sessionCount, setSessionCount] = useState(0);
