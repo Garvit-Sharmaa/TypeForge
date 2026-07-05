@@ -14,3 +14,6 @@ export * from './schemas/session.schema';
 export * from './constants/ranks';
 export * from './constants/xp';
 export * from './constants/limits';
+
+// Engine
+export * from './engine/AdaptiveTextGenerator';
