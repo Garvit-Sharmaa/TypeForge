@@ -60,15 +60,49 @@ export const CHAPTER_MAP = new Map<string, ApiChapterMeta>([
   ['3.6', { type: 'drill'    }],
   ['3.7', { type: 'test',    basePassingWpm: 50 }],  // Final Boss L3
 
-  // ── Lesson 4 — Symbols & Peak Mastery ────────────────────────────────────
+  // ── Lesson 4 — Numbers (Top Row) ────────────────────────────────────
   ['4.0', { type: 'tutorial' }],
   ['4.1', { type: 'drill'    }],
   ['4.2', { type: 'drill'    }],
   ['4.3', { type: 'drill'    }],
-  ['4.4', { type: 'drill'    }],
-  ['4.5', { type: 'drill'    }],
-  ['4.6', { type: 'drill'    }],
-  ['4.7', { type: 'test',    basePassingWpm: 65 }],  // Final Boss L4 — Grandmaster
+  ['4.4', { type: 'test',    basePassingWpm: 45 }],
+
+  // ── Lesson 5 — Shift Mastery (Capitalization) ────────────────────────────────────
+  ['5.0', { type: 'tutorial' }],
+  ['5.1', { type: 'drill'    }],
+  ['5.2', { type: 'drill'    }],
+  ['5.3', { type: 'drill'    }],
+  ['5.4', { type: 'test',    basePassingWpm: 50 }],
+
+  // ── Lesson 6 — Advanced Symbols & Punctuation ────────────────────────────────────
+  ['6.0', { type: 'tutorial' }],
+  ['6.1', { type: 'drill'    }],
+  ['6.2', { type: 'drill'    }],
+  ['6.3', { type: 'drill'    }],
+  ['6.4', { type: 'drill'    }],
+  ['6.5', { type: 'test',    basePassingWpm: 40 }],
+
+  // ── Lesson 7 — Speed & N-Gram Drills ────────────────────────────────────
+  ['7.0', { type: 'tutorial' }],
+  ['7.1', { type: 'drill'    }],
+  ['7.2', { type: 'drill'    }],
+  ['7.3', { type: 'drill'    }],
+  ['7.4', { type: 'drill'    }],
+  ['7.5', { type: 'test',    basePassingWpm: 70 }],
+
+  // ── Lesson 8 — Adaptive Weak-Key Targeting ────────────────────────────────────
+  ['8.0', { type: 'tutorial' }],
+  ['8.1', { type: 'drill'    }],
+  ['8.2', { type: 'drill'    }],
+  ['8.3', { type: 'drill'    }],
+  ['8.4', { type: 'test',    basePassingWpm: 75 }],
+
+  // ── Lesson 9 — Grandmaster Speed Run ────────────────────────────────────
+  ['9.0', { type: 'tutorial' }],
+  ['9.1', { type: 'drill'    }],
+  ['9.2', { type: 'drill'    }],
+  ['9.3', { type: 'drill'    }],
+  ['9.4', { type: 'test',    basePassingWpm: 80 }],
 ]);
 
 /** Difficulty modifiers — mirrors DifficultyModifiers in @typing-master/shared */

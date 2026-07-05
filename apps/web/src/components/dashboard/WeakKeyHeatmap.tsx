@@ -18,6 +18,7 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
+import { useTheme } from 'next-themes';
 
 // ── QWERTY layout definition ──────────────────────────────────────────────────
 const KEY_SIZE = 44;
@@ -75,15 +76,26 @@ function lerpColor(a: [number,number,number], b: [number,number,number], t: numb
   return `rgb(${r},${g},${bv})`;
 }
 
-const C_BASE:   [number,number,number] = [26,  26,  46 ]; // #1a1a2e
-const C_AMBER:  [number,number,number] = [120, 80,  0  ]; // dark amber
-const C_RED:    [number,number,number] = [120, 30,  30 ]; // dark red
+// Dark Mode Colors
+const C_BASE_DARK:   [number,number,number] = [17,  24,  39 ]; // #111827 (Tailwind slate-900)
+const C_AMBER_DARK:  [number,number,number] = [120, 80,  0  ]; // dark amber
+const C_RED_DARK:    [number,number,number] = [120, 30,  30 ]; // dark red
 
-function errorRateToColor(rate: number): string {
-  if (rate <= 0)    return `rgb(${C_BASE.join(',')})`;
-  if (rate < 0.05)  return lerpColor(C_BASE,  C_AMBER, rate / 0.05);
-  if (rate < 0.20)  return lerpColor(C_AMBER, C_RED,   (rate - 0.05) / 0.15);
-  return `rgb(${C_RED.join(',')})`;
+// Light Mode Colors
+const C_BASE_LIGHT:  [number,number,number] = [241, 245, 249]; // #f1f5f9 (Tailwind slate-100)
+const C_AMBER_LIGHT: [number,number,number] = [251, 191, 36 ]; // #fbbf24 (amber-400)
+const C_RED_LIGHT:   [number,number,number] = [248, 113, 113]; // #f87171 (red-400)
+
+function errorRateToColor(
+  rate: number, 
+  cBase: [number,number,number], 
+  cAmber: [number,number,number], 
+  cRed: [number,number,number]
+): string {
+  if (rate <= 0)    return `rgb(${cBase.join(',')})`;
+  if (rate < 0.05)  return lerpColor(cBase,  cAmber, rate / 0.05);
+  if (rate < 0.20)  return lerpColor(cAmber, cRed,   (rate - 0.05) / 0.15);
+  return `rgb(${cRed.join(',')})`;
 }
 
 function errorRateToTextColor(rate: number): string {
@@ -117,6 +129,7 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, key: '', errorRate: 0, avgLatencyMs: 0, sampleCount: 0 });
+  const { resolvedTheme } = useTheme();
 
   // Build lookup map for O(1) key lookups during render
   const dataMap = React.useMemo(() => {
@@ -144,8 +157,14 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
     for (const rect of KEY_RECTS) {
       const kd        = dataMap.get(rect.char);
       const errorRate = kd?.errorRate ?? 0;
-      const bgColor   = errorRateToColor(errorRate);
-      const txtColor  = kd ? errorRateToTextColor(errorRate) : '#4a4a6a';
+      
+      const isDark = resolvedTheme === 'dark';
+      const cBase  = isDark ? C_BASE_DARK  : C_BASE_LIGHT;
+      const cAmber = isDark ? C_AMBER_DARK : C_AMBER_LIGHT;
+      const cRed   = isDark ? C_RED_DARK   : C_RED_LIGHT;
+
+      const bgColor   = errorRateToColor(errorRate, cBase, cAmber, cRed);
+      const txtColor  = kd ? errorRateToTextColor(errorRate) : (isDark ? '#4a4a6a' : '#94a3b8');
       const r         = 6; // border radius
 
       // Key background
@@ -157,7 +176,7 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
       // Key border
       ctx.strokeStyle = errorRate > 0.04
         ? `rgba(248,113,113,${Math.min(errorRate * 3, 0.5)})`
-        : 'rgba(255,255,255,0.06)';
+        : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)');
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -181,7 +200,7 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
         );
       }
     }
-  }, [dataMap]);
+  }, [dataMap, resolvedTheme]);
 
   useEffect(() => { draw(); }, [draw]);
 
@@ -261,13 +280,13 @@ const WeakKeyHeatmap = React.memo(function WeakKeyHeatmap({ data }: WeakKeyHeatm
       <div className="flex items-center gap-3 mt-3 px-2">
         <span className="text-[10px] text-untyped font-mono">Error rate:</span>
         {[
-          { label: '0%',  color: `rgb(${C_BASE.join(',')})` },
-          { label: '5%',  color: lerpColor(C_BASE, C_AMBER, 1) },
-          { label: '10%', color: lerpColor(C_AMBER, C_RED, 0.33) },
-          { label: '20%+',color: `rgb(${C_RED.join(',')})` },
+          { label: '0%',  color: `rgb(${(resolvedTheme === 'dark' ? C_BASE_DARK : C_BASE_LIGHT).join(',')})` },
+          { label: '5%',  color: lerpColor(resolvedTheme === 'dark' ? C_BASE_DARK : C_BASE_LIGHT, resolvedTheme === 'dark' ? C_AMBER_DARK : C_AMBER_LIGHT, 1) },
+          { label: '10%', color: lerpColor(resolvedTheme === 'dark' ? C_AMBER_DARK : C_AMBER_LIGHT, resolvedTheme === 'dark' ? C_RED_DARK : C_RED_LIGHT, 0.33) },
+          { label: '20%+',color: `rgb(${(resolvedTheme === 'dark' ? C_RED_DARK : C_RED_LIGHT).join(',')})` },
         ].map(({ label, color }) => (
           <div key={label} className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded" style={{ backgroundColor: color, border: '1px solid rgba(255,255,255,0.1)' }} />
+            <span className="w-3 h-3 rounded" style={{ backgroundColor: color, border: resolvedTheme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)' }} />
             <span className="text-[10px] text-muted font-mono">{label}</span>
           </div>
         ))}

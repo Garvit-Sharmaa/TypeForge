@@ -276,76 +276,118 @@ const CHAPTER_TEMPLATES: { lesson: Omit<Lesson, 'isLocked' | 'chapters'>; chapte
   },
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // LESSON 4 — Symbols, Punctuation & Peak Mastery
-  // Keys: ' - = [ ] \ ` plus full-keyboard speed and adaptive weak-key targeting
+  // LESSON 4 — Numbers (Top Row)
   // ══════════════════════════════════════════════════════════════════════════════
   {
     lesson: {
       id:          'lesson-4',
       number:      4,
-      title:       'Symbols & Peak Mastery',
-      description: 'Complete punctuation and symbol coverage. Then face the ultimate ' +
-                   'adaptive test — built from your personal weak-key data.',
+      title:       'Numbers (Top Row)',
+      description: 'Reach past the letters. Master the number row from 1 to 0 without looking at your hands.',
     },
     chapters: [
-      {
-        id:               '4.0',
-        title:            'Introduction — Punctuation & Symbols',
-        type:             'tutorial',
-        estimatedMinutes: 3,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.1',
-        title:            'Common Punctuation — Apostrophe, Dash & Equals',
-        type:             'drill',
-        estimatedMinutes: 6,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.2',
-        title:            'Bracket & Backslash Cluster',
-        type:             'drill',
-        estimatedMinutes: 6,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.3',
-        title:            'Full Keyboard Bigrams & Trigrams',
-        type:             'drill',
-        estimatedMinutes: 8,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.4',
-        title:            'Speed Sentence Drills',
-        type:             'drill',
-        estimatedMinutes: 10,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.5',
-        title:            'Adaptive Weak-Key Targeting',
-        type:             'drill',
-        estimatedMinutes: 12,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.6',
-        title:            'Advanced Paragraph Speed Run',
-        type:             'drill',
-        estimatedMinutes: 12,
-        lessonConfigId:   'lesson-10-mastery',
-      },
-      {
-        id:               '4.7',
-        title:            'Final Boss — TypeForge Grandmaster Test',
-        type:             'test',
-        estimatedMinutes: 5,
-        lessonConfigId:   'lesson-10-mastery',
-        basePassingWpm:       65,
-        basePassingAccuracy:  97,
-      },
+      { id: '4.0', title: 'Introduction — The Number Row', type: 'tutorial', estimatedMinutes: 3, lessonConfigId: 'lesson-11-numbers' },
+      { id: '4.1', title: 'Left Hand Numbers — 1, 2, 3, 4, 5', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-11-numbers' },
+      { id: '4.2', title: 'Right Hand Numbers — 6, 7, 8, 9, 0', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-11-numbers' },
+      { id: '4.3', title: 'Alphanumeric Drills', type: 'drill', estimatedMinutes: 8, lessonConfigId: 'lesson-11-numbers' },
+      { id: '4.4', title: 'Final Boss — Number Row Test', type: 'test', estimatedMinutes: 5, lessonConfigId: 'lesson-11-numbers', basePassingWpm: 45, basePassingAccuracy: 95 },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // LESSON 5 — Shift Mastery (Capitalization)
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    lesson: {
+      id:          'lesson-5',
+      number:      5,
+      title:       'Shift Mastery (Capitalization)',
+      description: 'Learn the proper technique for capital letters using the opposite Shift key.',
+    },
+    chapters: [
+      { id: '5.0', title: 'Introduction — The Shift Keys', type: 'tutorial', estimatedMinutes: 3, lessonConfigId: 'lesson-12-shift' },
+      { id: '5.1', title: 'Left Shift (Right Hand Caps)', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-12-shift' },
+      { id: '5.2', title: 'Right Shift (Left Hand Caps)', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-12-shift' },
+      { id: '5.3', title: 'Proper Nouns & Names', type: 'drill', estimatedMinutes: 8, lessonConfigId: 'lesson-12-shift' },
+      { id: '5.4', title: 'Final Boss — Capitalization Test', type: 'test', estimatedMinutes: 5, lessonConfigId: 'lesson-12-shift', basePassingWpm: 50, basePassingAccuracy: 95 },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // LESSON 6 — Advanced Symbols & Punctuation
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    lesson: {
+      id:          'lesson-6',
+      number:      6,
+      title:       'Advanced Symbols & Punctuation',
+      description: 'Master brackets, slashes, dashes, and the shifted number-row symbols (!@#$%).',
+    },
+    chapters: [
+      { id: '6.0', title: 'Introduction — Special Symbols', type: 'tutorial', estimatedMinutes: 3, lessonConfigId: 'lesson-13-symbols' },
+      { id: '6.1', title: 'Common Punctuation — Dash, Equals & Brackets', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-13-symbols' },
+      { id: '6.2', title: 'Shifted Symbols — ! @ # $ %', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-13-symbols' },
+      { id: '6.3', title: 'Shifted Symbols — ^ & * ( )', type: 'drill', estimatedMinutes: 6, lessonConfigId: 'lesson-13-symbols' },
+      { id: '6.4', title: 'Code Syntax Drills', type: 'drill', estimatedMinutes: 10, lessonConfigId: 'lesson-13-symbols' },
+      { id: '6.5', title: 'Final Boss — Symbols Mastery Test', type: 'test', estimatedMinutes: 5, lessonConfigId: 'lesson-13-symbols', basePassingWpm: 40, basePassingAccuracy: 96 },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // LESSON 7 — Speed & N-Gram Drills
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    lesson: {
+      id:          'lesson-7',
+      number:      7,
+      title:       'Speed & N-Gram Drills',
+      description: 'Break past your WPM plateaus. Focus on common word fragments and muscle memory bursts.',
+    },
+    chapters: [
+      { id: '7.0', title: 'Introduction — N-Grams and Flow', type: 'tutorial', estimatedMinutes: 3, lessonConfigId: 'lesson-14-speed' },
+      { id: '7.1', title: 'Top 50 Common Words', type: 'drill', estimatedMinutes: 8, lessonConfigId: 'lesson-14-speed' },
+      { id: '7.2', title: 'Frequent Bigrams (th, er, on)', type: 'drill', estimatedMinutes: 8, lessonConfigId: 'lesson-14-speed' },
+      { id: '7.3', title: 'Frequent Trigrams (the, and, ing)', type: 'drill', estimatedMinutes: 8, lessonConfigId: 'lesson-14-speed' },
+      { id: '7.4', title: 'Burst Speed Paragraphs', type: 'drill', estimatedMinutes: 10, lessonConfigId: 'lesson-14-speed' },
+      { id: '7.5', title: 'Final Boss — Speed Execution Test', type: 'test', estimatedMinutes: 5, lessonConfigId: 'lesson-14-speed', basePassingWpm: 70, basePassingAccuracy: 96 },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // LESSON 8 — Adaptive Weak-Key Targeting
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    lesson: {
+      id:          'lesson-8',
+      number:      8,
+      title:       'Adaptive Weak-Key Targeting',
+      description: 'Use your historical data to forge drills specifically designed to eliminate your weaknesses.',
+    },
+    chapters: [
+      { id: '8.0', title: 'Introduction — The Adaptive Engine', type: 'tutorial', estimatedMinutes: 3, lessonConfigId: 'lesson-10-mastery' },
+      { id: '8.1', title: 'Left Hand Weakness Focus', type: 'drill', estimatedMinutes: 10, lessonConfigId: 'lesson-10-mastery' },
+      { id: '8.2', title: 'Right Hand Weakness Focus', type: 'drill', estimatedMinutes: 10, lessonConfigId: 'lesson-10-mastery' },
+      { id: '8.3', title: 'Dynamic Full-Keyboard Calibration', type: 'drill', estimatedMinutes: 12, lessonConfigId: 'lesson-10-mastery' },
+      { id: '8.4', title: 'Final Boss — Adaptive Eradication Test', type: 'test', estimatedMinutes: 5, lessonConfigId: 'lesson-10-mastery', basePassingWpm: 75, basePassingAccuracy: 97 },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // LESSON 9 — Grandmaster Speed Run
+  // ══════════════════════════════════════════════════════════════════════════════
+  {
+    lesson: {
+      id:          'lesson-9',
+      number:      9,
+      title:       'Grandmaster Speed Run',
+      description: 'The ultimate test of typing proficiency. Sustained accuracy and high speed on complex texts.',
+    },
+    chapters: [
+      { id: '9.0', title: 'Introduction — The Final Gauntlet', type: 'tutorial', estimatedMinutes: 3, lessonConfigId: 'lesson-15-grandmaster' },
+      { id: '9.1', title: 'Complex Vocabulary Run', type: 'drill', estimatedMinutes: 12, lessonConfigId: 'lesson-15-grandmaster' },
+      { id: '9.2', title: 'Sustained Endurance (10 minutes)', type: 'drill', estimatedMinutes: 15, lessonConfigId: 'lesson-15-grandmaster' },
+      { id: '9.3', title: 'Flawless Execution (Zero Errors allowed)', type: 'drill', estimatedMinutes: 10, lessonConfigId: 'lesson-15-grandmaster' },
+      { id: '9.4', title: 'Final Boss — TypeForge Grandmaster Test', type: 'test', estimatedMinutes: 5, lessonConfigId: 'lesson-15-grandmaster', basePassingWpm: 80, basePassingAccuracy: 98 },
     ],
   },
 ];

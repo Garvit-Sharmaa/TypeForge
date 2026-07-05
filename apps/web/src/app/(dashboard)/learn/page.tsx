@@ -17,8 +17,8 @@
  * PRESERVATION: Zero modifications to TypingArena, ForgePanel, or any store/hook.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter }    from 'next/navigation';
+import React, { useCallback, useEffect, useRef, useState, Suspense } from 'react';
+import { useRouter, useSearchParams }    from 'next/navigation';
 import { motion }       from 'framer-motion';
 import { GraduationCap, RefreshCw } from 'lucide-react';
 
@@ -90,8 +90,10 @@ function GlobalProgressBar({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function LearnPage() {
+function LearnContent() {
   const router      = useRouter();
+  const searchParams = useSearchParams();
+  const autoLaunch  = searchParams.get('autoLaunch');
   const tokens      = useUserStore(selectTokens);
   const user        = useUserStore(selectUser);
   const isHydrated  = useUserStore((s) => s.isHydrated);
@@ -143,6 +145,20 @@ export default function LearnPage() {
   }, [tokens?.accessToken, isHydrated]);
 
   useEffect(() => { fetchProgress(); }, [fetchProgress]);
+
+  // ── Auto Launch (Next Chapter Flow) ──────────────────────────────────────
+  useEffect(() => {
+    if (autoLaunch && !isLoading && !isLaunching && !startingId && !pendingChapter) {
+      const lesson = curriculum.find((l) => l.chapters.some((c) => c.id === autoLaunch));
+      const chapter = lesson?.chapters.find((c) => c.id === autoLaunch);
+
+      if (lesson && chapter && !lesson.isLocked) {
+        // Clean URL so it doesn't loop
+        router.replace('/learn');
+        handleChapterStart(chapter, lesson);
+      }
+    }
+  }, [autoLaunch, isLoading, isLaunching, startingId, pendingChapter, curriculum, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Clear progress when user changes (multi-account on same tab) ─────────
   const prevUserIdRef = useRef<string | null>(null);
@@ -224,6 +240,9 @@ export default function LearnPage() {
     wpm:        number,
     accuracy:   number,
   ) {
+    // Optimistic local update (instant UI unlock)
+    setCompletedIds((prev) => new Set([...prev, chapterId]));
+
     try {
       if (tokens?.accessToken) {
         await lessonsApi.markProgress(
@@ -231,10 +250,16 @@ export default function LearnPage() {
           tokens.accessToken,
         );
       }
-      // Optimistic local update
-      setCompletedIds((prev) => new Set([...prev, chapterId]));
+      // Force Next.js cache invalidation
+      router.refresh();
     } catch (err: any) {
       console.error('[Academy] markProgress failed:', err.message);
+      // Revert optimistic update on failure
+      setCompletedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(chapterId);
+        return next;
+      });
     }
   }
 
@@ -283,7 +308,23 @@ export default function LearnPage() {
         payload.words,
       );
 
-      router.push(`/practice?lessonId=${encodeURIComponent(payload.lessonId)}`);
+      // Compute nextRoute
+      const allChapters = curriculum.flatMap(l => l.chapters);
+      const currentIndex = allChapters.findIndex(ch => ch.id === chapter.id);
+      const nextChapter = currentIndex !== -1 && currentIndex + 1 < allChapters.length 
+        ? allChapters[currentIndex + 1] 
+        : null;
+      
+      const nextRoute = nextChapter 
+        ? `/learn?autoLaunch=${nextChapter.id}`
+        : `/learn`;
+
+      const isTest = chapter.type === 'test';
+      const mod = DifficultyModifiers[difficulty];
+      const reqWpm = isTest ? Math.round((chapter.basePassingWpm ?? 0) * mod.wpmMultiplier) : 0;
+      const reqAcc = isTest ? mod.accuracyReq : 0;
+
+      router.push(`/practice?lessonId=${encodeURIComponent(payload.lessonId)}&nextRoute=${encodeURIComponent(nextRoute)}&reqWpm=${reqWpm}&reqAcc=${reqAcc}`);
     } catch (err: any) {
       setSessionError(err.message ?? 'Failed to start chapter. Please try again.');
       pendingChapterIdRef.current  = null;
@@ -433,5 +474,17 @@ export default function LearnPage() {
         <Toast toast={toast} onDismiss={() => setToast(null)} />
       )}
     </div>
+  );
+}
+
+export default function LearnPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[calc(100dvh-52px)] items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-violet/40 border-t-violet animate-spin" />
+      </div>
+    }>
+      <LearnContent />
+    </Suspense>
   );
 }

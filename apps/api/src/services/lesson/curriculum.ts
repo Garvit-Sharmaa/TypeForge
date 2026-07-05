@@ -33,6 +33,10 @@ const BOT_MID_RING = ['c','x',',','.'];
 const BOT_PINKY    = ['z','/'];
 const MASTERY_EXTRA= ["'",'-','=','[',']','\\','`']; // optional punctuation
 
+const NUMBERS      = ['1','2','3','4','5','6','7','8','9','0'];
+const SHIFT_ALPHA  = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+const SYMBOLS      = ['!','@','#','$','%','^','&','*','(',')','_','+','{','}','|',':','"','<','>','?','~'];
+
 // ── Cumulative key sets per lesson ────────────────────────────────────────────
 const ALLOW_1  = cumulative(HOME_CORE);
 const ALLOW_2  = cumulative(ALLOW_1,  HOME_REACHES);
@@ -44,6 +48,11 @@ const ALLOW_7  = cumulative(ALLOW_6,  BOT_INDEX);
 const ALLOW_8  = cumulative(ALLOW_7,  BOT_MID_RING);
 const ALLOW_9  = cumulative(ALLOW_8,  BOT_PINKY);
 const ALLOW_10 = cumulative(ALLOW_9,  MASTERY_EXTRA);
+const ALLOW_11 = cumulative(ALLOW_10, NUMBERS);
+const ALLOW_12 = cumulative(ALLOW_11, SHIFT_ALPHA);
+const ALLOW_13 = cumulative(ALLOW_12, SYMBOLS);
+// ALLOW_14 and 15 use ALLOW_13 (everything)
+const ALLOW_FULL = ALLOW_13;
 
 // ── Curriculum definition ─────────────────────────────────────────────────────
 export const CURRICULUM: Readonly<LessonConfig[]> = Object.freeze([
@@ -241,6 +250,95 @@ export const CURRICULUM: Readonly<LessonConfig[]> = Object.freeze([
     targetKeyFrequency: 0.0,        // 100% adaptive (all slots go to weakKey pool)
   },
 
+  // ── Lesson 11: Numbers (Top Row) ───────────────────────────────────────────────
+  {
+    id:                 'lesson-11-numbers',
+    name:               'Lesson 11 — Numbers',
+    description:        'Master the number row from 1 to 0 without looking at your hands.',
+    stage:              10,
+    allowedKeys:        ALLOW_11,
+    targetKeys:         NUMBERS,
+    lockedKeys:         [],
+    targetFingers:      ['left-pinky','left-ring','left-middle','left-index','right-index','right-middle','right-ring','right-pinky'],
+    handRestriction:    'both',
+    baseDifficulty:     4,
+    wordCount:          25,
+    minWordLength:      3,
+    maxWordLength:      8,
+    targetKeyFrequency: 0.7, 
+  },
+
+  // ── Lesson 12: Shift Mastery (Capitalization) ──────────────────────────────────
+  {
+    id:                 'lesson-12-shift',
+    name:               'Lesson 12 — Shift Mastery',
+    description:        'Learn the proper technique for capital letters using the opposite Shift key.',
+    stage:              11,
+    allowedKeys:        ALLOW_12,
+    targetKeys:         SHIFT_ALPHA,
+    lockedKeys:         [],
+    targetFingers:      ['left-pinky','left-ring','left-middle','left-index','right-index','right-middle','right-ring','right-pinky'],
+    handRestriction:    'both',
+    baseDifficulty:     4,
+    wordCount:          25,
+    minWordLength:      4,
+    maxWordLength:      10,
+    targetKeyFrequency: 0.8,
+  },
+
+  // ── Lesson 13: Advanced Symbols ───────────────────────────────────────────────
+  {
+    id:                 'lesson-13-symbols',
+    name:               'Lesson 13 — Advanced Symbols',
+    description:        'Master brackets, slashes, dashes, and the shifted number-row symbols.',
+    stage:              12,
+    allowedKeys:        ALLOW_13,
+    targetKeys:         SYMBOLS,
+    lockedKeys:         [],
+    targetFingers:      ['left-pinky','left-ring','left-middle','left-index','right-index','right-middle','right-ring','right-pinky'],
+    handRestriction:    'both',
+    baseDifficulty:     5,
+    wordCount:          30,
+    minWordLength:      4,
+    maxWordLength:      10,
+    targetKeyFrequency: 0.7,
+  },
+
+  // ── Lesson 14: Speed Drills ───────────────────────────────────────────────────
+  {
+    id:                 'lesson-14-speed',
+    name:               'Lesson 14 — Speed Drills',
+    description:        'Break past your WPM plateaus. Focus on common word fragments and muscle memory bursts.',
+    stage:              13,
+    allowedKeys:        ALLOW_FULL,
+    targetKeys:         [],
+    lockedKeys:         [],
+    targetFingers:      ['left-pinky','left-ring','left-middle','left-index','right-index','right-middle','right-ring','right-pinky'],
+    handRestriction:    'both',
+    baseDifficulty:     4,
+    wordCount:          40,
+    minWordLength:      2,
+    maxWordLength:      6,
+    targetKeyFrequency: 0.0,
+  },
+
+  // ── Lesson 15: Grandmaster ────────────────────────────────────────────────────
+  {
+    id:                 'lesson-15-grandmaster',
+    name:               'Lesson 15 — Grandmaster',
+    description:        'The ultimate test of typing proficiency. Sustained accuracy and high speed on complex texts.',
+    stage:              14,
+    allowedKeys:        ALLOW_FULL,
+    targetKeys:         [],
+    lockedKeys:         [],
+    targetFingers:      ['left-pinky','left-ring','left-middle','left-index','right-index','right-middle','right-ring','right-pinky'],
+    handRestriction:    'both',
+    baseDifficulty:     5,
+    wordCount:          50,
+    minWordLength:      5,
+    maxWordLength:      12,
+    targetKeyFrequency: 0.0,
+  },
 ]) as unknown as LessonConfig[];
 
 // ── Lookup helpers ────────────────────────────────────────────────────────────

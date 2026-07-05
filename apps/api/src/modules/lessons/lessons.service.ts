@@ -125,6 +125,12 @@ export async function generateLesson(
     throw createError(`Lesson "${lessonId}" not found`, 404, 'LESSON_NOT_FOUND');
   }
 
+  // Enforce lock bypass protection (Security Mismatch Fix)
+  const maxStage = await getUserMaxStage(userId);
+  if ((config.stage ?? 0) > maxStage + 1) {
+    throw createError(`Lesson "${lessonId}" is locked for this user.`, 403, 'LESSON_LOCKED');
+  }
+
   // Fetch user-specific weak keys for adaptive weighting
   const weakKeyChars = await getUserWeakKeyChars(userId);
 

@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTypingStore, selectResults } from '@/store/typingStore';
 
 interface ResultsPanelProps {
@@ -28,10 +28,18 @@ const StatBlock = ({ label, value, unit }: {
 const ResultsPanel = React.memo(function ResultsPanel({ onRestart }: ResultsPanelProps) {
   const results = useTypingStore(selectResults);
   const router  = useRouter();
+  const searchParams = useSearchParams();
   if (!results) return null;
 
   const { wpm, rawWpm, accuracy, correctWords, totalWords, durationMs } = results;
   const seconds = Math.round(durationMs / 1000);
+
+  // Read routing/passing requirements from URL
+  const nextRoute = searchParams.get('nextRoute');
+  const reqWpm = parseInt(searchParams.get('reqWpm') || '0', 10);
+  const reqAcc = parseInt(searchParams.get('reqAcc') || '0', 10);
+
+  const passed = results.wpm >= reqWpm && results.accuracy >= reqAcc;
 
   const topErrors = Object.entries(results.weakKeyMap)
     .sort(([, a], [, b]) => b.errors / b.total - a.errors / a.total)
@@ -98,14 +106,27 @@ const ResultsPanel = React.memo(function ResultsPanel({ onRestart }: ResultsPane
           <span>Restart</span>
           <kbd className="text-xs bg-white/10 px-1.5 py-0.5 rounded font-mono">Tab</kbd>
         </button>
-        <button
-          id="view-dashboard-btn"
-          onClick={() => router.push('/dashboard')}
-          className="text-muted hover:text-correct transition-colors text-sm underline
-                     underline-offset-2"
-        >
-          View dashboard →
-        </button>
+
+        {nextRoute && passed ? (
+          <button
+            id="next-chapter-btn"
+            onClick={() => router.push(nextRoute)}
+            className="flex items-center gap-2 bg-correct hover:bg-correct/80
+                       text-slate-900 font-medium px-6 py-3 rounded-xl
+                       transition-all duration-150 active:scale-95 shadow-md"
+          >
+            Next Chapter →
+          </button>
+        ) : (
+          <button
+            id="view-dashboard-btn"
+            onClick={() => router.push('/learn')}
+            className="text-muted hover:text-correct transition-colors text-sm underline
+                       underline-offset-2"
+          >
+            View dashboard →
+          </button>
+        )}
       </div>
     </div>
   );
