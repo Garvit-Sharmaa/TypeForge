@@ -4,7 +4,6 @@ version: '3.9'
 networks:
   typing_net:
     driver: bridge
-
 # ─── Volumes ──────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
