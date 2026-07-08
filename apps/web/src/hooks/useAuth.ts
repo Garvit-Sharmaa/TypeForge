@@ -27,59 +27,52 @@ export function useAuth() {
   } = useUserStore();
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isRefreshingRef = useRef(false);
+
+  // ── Refresh Logic ─────────────────────────────────────────────────────────
+  const doRefresh = useCallback(async (refreshToken: string) => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    try {
+      const newTokens = await authApi.refresh(refreshToken);
+      document.cookie = `accessToken=${newTokens.accessToken}; path=/; max-age=${newTokens.expiresIn}; SameSite=Lax; Secure`;
+      const profile = await authApi.me(newTokens.accessToken);
+      // Always get fresh user from store instead of closure
+      const currentUser = useUserStore.getState().user;
+      useUserStore.getState().setUser(
+        currentUser ?? {
+          id: profile.sub, email: profile.email, username: profile.username,
+          rank: profile.rank as any, xp: 0, createdAt: new Date(), updatedAt: new Date(),
+        },
+        newTokens,
+      );
+      scheduleRefresh(newTokens.expiresIn, newTokens.refreshToken);
+    } catch {
+      storeLogout();
+      document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
+      router.push('/login');
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, [storeLogout, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Schedule automatic token refresh ──────────────────────────────────────
   const scheduleRefresh = useCallback((expiresIn: number, refreshToken: string) => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    // Refresh 60 seconds before expiry
     const delay = Math.max((expiresIn - 60) * 1000, 5000);
-    refreshTimerRef.current = setTimeout(async () => {
-      try {
-        const newTokens = await authApi.refresh(refreshToken);
-
-        document.cookie = `accessToken=${newTokens.accessToken}; path=/; max-age=${newTokens.expiresIn}; SameSite=Lax; Secure`;
-        // Re-fetch user profile with new token
-        const profile = await authApi.me(newTokens.accessToken);
-        setUser(
-          {
-            id: profile.sub, email: profile.email, username: profile.username,
-            rank: profile.rank as any, xp: 0, createdAt: new Date(), updatedAt: new Date(),
-          },
-          newTokens,
-        );
-        scheduleRefresh(newTokens.expiresIn, newTokens.refreshToken);
-      } catch {
-        storeLogout();
-        router.push('/login');
-      }
-    }, delay);
-  }, [setUser, storeLogout, router]);
+    refreshTimerRef.current = setTimeout(() => doRefresh(refreshToken), delay);
+  }, [doRefresh]);
 
   // ── Hydrate from persisted store on mount ─────────────────────────────────
   useEffect(() => {
     if (!isHydrated) return;
 
     if (!tokens?.refreshToken) {
-      // User is completely logged out in local state (e.g. localStorage cleared).
-      // CRITICAL: Ensure the cookie is wiped so middleware doesn't trap them in a redirect loop!
       document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
       return;
     }
 
-    // Validate the stored refresh token by refreshing immediately
-    authApi.refresh(tokens.refreshToken)
-      .then((newTokens) => {
-        if (user) {
-          setUser(user, newTokens);
-          scheduleRefresh(newTokens.expiresIn, newTokens.refreshToken);
-        }
-      })
-      .catch(() => {
-        storeLogout(); // stale refresh token — clear store
-        // CRITICAL: We must also wipe the stale cookie, otherwise edge middleware
-        // will keep thinking the user is authenticated and redirect them away from /login!
-        document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
-      });
+    void doRefresh(tokens.refreshToken);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated]);
 
@@ -131,28 +124,33 @@ export function useAuth() {
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-
-    // Wipe ALL in-memory derived state so no previous user's data is
-    // visible even for a single render cycle after logout.
-    // userStore.logout() also calls persist.clearStorage() to wipe localStorage.
-    useAnalyticsStore.getState().invalidate();       // clears dashboard cache
-    useAnalyticsStore.getState().setWeakKeys([]);    // clears weak-key heatmap
-    storeLogout();                                   // clears user + tokens + localStorage
-
+    useAnalyticsStore.getState().invalidate();
+    useAnalyticsStore.getState().setWeakKeys([]);
+    storeLogout();
     document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
-
     router.push('/login');
   }, [storeLogout, router]);
 
   // ── Global 401 Listener ───────────────────────────────────────────────────
   useEffect(() => {
     const handleUnauthorized = () => {
-      console.warn('[useAuth] Global 401 received. Forcing logout.');
-      logout();
+      console.warn('[useAuth] Global 401 received.');
+      if (isRefreshingRef.current) {
+        console.info('[useAuth] Refresh in progress. Ignoring 401.');
+        return;
+      }
+      const currentTokens = useUserStore.getState().tokens;
+      if (currentTokens?.refreshToken) {
+        console.info('[useAuth] Attempting refresh instead of logout.');
+        void doRefresh(currentTokens.refreshToken);
+      } else {
+        console.warn('[useAuth] No refresh token available. Forcing logout.');
+        logout();
+      }
     };
     window.addEventListener('auth:401', handleUnauthorized);
     return () => window.removeEventListener('auth:401', handleUnauthorized);
-  }, [logout]);
+  }, [logout, doRefresh]);
 
   return {
     user,
