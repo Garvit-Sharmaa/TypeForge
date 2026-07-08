@@ -42,8 +42,18 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Login failed. Try again.');
+    } catch (err: any) {
+      // instanceof can be flaky during HMR or across chunks; use name or fallback to message
+      const isApiError = err instanceof ApiError || err?.name === 'ApiError';
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      
+      if (isApiError) {
+        setError(err.message);
+      } else if (isNetworkError) {
+        setError('Network Error: Cannot reach the Keystra server. Please try again.');
+      } else {
+        setError(err?.message || 'Login failed. Try again.');
+      }
     } finally {
       setLoading(false);
     }

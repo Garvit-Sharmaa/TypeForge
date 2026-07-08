@@ -78,8 +78,17 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(email, username, password);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Registration failed. Try again.');
+    } catch (err: any) {
+      const isApiError = err instanceof ApiError || err?.name === 'ApiError';
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      
+      if (isApiError) {
+        setError(err.message);
+      } else if (isNetworkError) {
+        setError('Network Error: Cannot reach the Keystra server. Please try again.');
+      } else {
+        setError(err?.message || 'Registration failed. Try again.');
+      }
     } finally {
       setLoading(false);
     }
