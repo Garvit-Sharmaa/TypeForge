@@ -35,7 +35,7 @@ export function useAuth() {
     isRefreshingRef.current = true;
     try {
       const newTokens = await authApi.refresh(refreshToken);
-      document.cookie = `accessToken=${newTokens.accessToken}; path=/; max-age=${newTokens.expiresIn}; SameSite=Lax; Secure`;
+      document.cookie = `accessToken=${newTokens.accessToken}; path=/; max-age=604800; SameSite=Lax; Secure`;
       const profile = await authApi.me(newTokens.accessToken);
       // Always get fresh user from store instead of closure
       const currentUser = useUserStore.getState().user;
@@ -81,7 +81,7 @@ export function useAuth() {
     setLoading(true);
     try {
       const result = await authApi.login({ email, password });
-      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=${result.expiresIn}; SameSite=Lax; Secure`;
+      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=604800; SameSite=Lax; Secure`;
       const profile = await authApi.me(result.accessToken);
       setUser(
         {
@@ -105,7 +105,7 @@ export function useAuth() {
     try {
       const result = await authApi.register({ email, username, password });
 
-      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=${result.expiresIn}; SameSite=Lax; Secure`;
+      document.cookie = `accessToken=${result.accessToken}; path=/; max-age=604800; SameSite=Lax; Secure`;
       const profile = await authApi.me(result.accessToken);
       setUser(
         {
