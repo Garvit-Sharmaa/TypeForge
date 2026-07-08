@@ -76,7 +76,7 @@ const ChapterRow = memo(function ChapterRow({
   const m       = TYPE_META[chapter.type];
   const isTest  = chapter.type === 'test';
   const isDone  = chapter.isCompleted;
-  const canAct  = !isLocked && !isDone;
+  const canAct  = !isLocked;
 
   return (
     <motion.div
@@ -86,16 +86,16 @@ const ChapterRow = memo(function ChapterRow({
       id={`chapter-row-${chapter.id}`}
       className={[
         'relative flex items-center gap-3 px-4 py-3 rounded-xl',
-        'border transition-all duration-200',
+        'border transition-all duration-200 group',
         // Final Boss gradient border
         isTest && !isDone && !isLocked
-          ? 'border-rose-500/30 bg-gradient-to-r from-rose-500/8 via-amber-500/5 to-transparent'
+          ? 'border-rose-500/30 bg-gradient-to-r from-rose-500/8 via-amber-500/5 to-transparent hover:border-rose-500/50 hover:bg-rose-500/10'
           : isDone
             // Completed: green-tinted with soft glow
-            ? 'border-correct/20 bg-correct/5 shadow-[0_0_12px_rgba(52,211,153,0.06)]'
-            : 'border-surface-3/50 bg-surface-2/50',
+            ? 'border-correct/20 bg-correct/5 shadow-[0_0_12px_rgba(52,211,153,0.06)] hover:border-correct/40 hover:bg-correct/10'
+            : 'border-surface-3/50 bg-surface-2/50 hover:border-surface-3 hover:bg-surface-2/80',
         isLocked ? 'opacity-40' : '',
-        canAct   ? 'cursor-pointer hover:border-surface-3 hover:bg-surface-2/80 group' : '',
+        canAct   ? 'cursor-pointer' : '',
       ].join(' ')}
       onClick={canAct && !isStarting ? () => onStart(chapter) : undefined}
     >
@@ -147,8 +147,8 @@ const ChapterRow = memo(function ChapterRow({
       </div>
 
       {/* Right: status / CTA */}
-      <div className="shrink-0">
-        {isDone ? (
+      <div className="shrink-0 flex items-center gap-3">
+        {isDone && (
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -156,7 +156,9 @@ const ChapterRow = memo(function ChapterRow({
           >
             <CheckCircle2 size={16} className="text-correct" strokeWidth={2} />
           </motion.div>
-        ) : isLocked ? (
+        )}
+
+        {isLocked ? (
           <span className="text-[9px] font-mono text-untyped/40">locked</span>
         ) : isStarting ? (
           <div className="w-5 h-5 rounded-full border-2 border-violet/40
@@ -166,12 +168,14 @@ const ChapterRow = memo(function ChapterRow({
             className={[
               'flex items-center gap-1 text-[10px] font-mono px-2.5 py-1',
               'rounded-lg border transition-all duration-150',
-              isTest
-                ? 'bg-rose-500/15 border-rose-500/30 text-rose-400 group-hover:bg-rose-500/25'
-                : 'bg-violet/15 border-violet/30 text-violet-light group-hover:bg-violet/25',
+              isDone
+                ? 'bg-surface-3/10 border-surface-3/20 text-untyped group-hover:bg-surface-3/30 group-hover:text-muted'
+                : isTest
+                  ? 'bg-rose-500/15 border-rose-500/30 text-rose-400 group-hover:bg-rose-500/25'
+                  : 'bg-violet/15 border-violet/30 text-violet-light group-hover:bg-violet/25',
             ].join(' ')}
           >
-            {isTest ? 'challenge' : 'start'}
+            {isDone ? 'replay' : isTest ? 'challenge' : 'start'}
             <ChevronRight size={10} strokeWidth={2.5} />
           </motion.span>
         )}
