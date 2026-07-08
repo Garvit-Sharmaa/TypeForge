@@ -23,7 +23,7 @@ function NavHeader() {
                        backdrop-blur-sm sticky top-0 z-30 bg-surface/80">
       {/* Logo */}
       <Link href="/" className="font-mono text-violet-light font-bold tracking-tight text-lg shrink-0">
-        Type<span className="text-correct">Forge</span>
+        Key<span className="text-correct">stra</span>
       </Link>
 
       {/* Primary nav */}
