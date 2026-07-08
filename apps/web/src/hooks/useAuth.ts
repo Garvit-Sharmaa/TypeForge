@@ -68,6 +68,9 @@ export function useAuth() {
       })
       .catch(() => {
         storeLogout(); // stale refresh token — clear store
+        // CRITICAL: We must also wipe the stale cookie, otherwise edge middleware
+        // will keep thinking the user is authenticated and redirect them away from /login!
+        document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated]);
