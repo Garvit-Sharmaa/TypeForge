@@ -100,18 +100,18 @@ interface KeyCapProps {
 const KeyCap = React.memo(function KeyCap({ keyDef, isAllowed, isPressed }: KeyCapProps) {
   // ── Visual state resolution (priority: pressed > allowed > default) ─────────
 
-  let bgClass      = 'bg-[#1a1a2e]';          // --surface-2
-  let borderClass  = 'border-[#22223b]';       // --surface-3
-  let textClass    = 'text-[#3d3d5c]';         // --untyped
-  let shadowClass  = '';
+  let bgClass      = 'bg-surface-1';
+  let borderClass  = 'border-surface-2';
+  let textClass    = 'text-untyped';
+  let shadowClass  = 'shadow-sm';
   let transformClass = '';
 
   if (isAllowed && !isPressed) {
     // TARGET/ALLOWED — soft violet tint, brighter label, glowing border
-    bgClass     = 'bg-[#1e1535]';
+    bgClass     = 'bg-violet/10';
     borderClass = 'border-violet/40';
-    textClass   = 'text-[#9090c0]';
-    shadowClass = 'shadow-[0_0_6px_rgba(124,58,237,0.20)]';
+    textClass   = 'text-violet dark:text-violet-light';
+    shadowClass = '';
   }
 
   if (isPressed) {
@@ -119,7 +119,7 @@ const KeyCap = React.memo(function KeyCap({ keyDef, isAllowed, isPressed }: KeyC
     bgClass       = 'bg-violet';
     borderClass   = 'border-violet-light';
     textClass     = 'text-white';
-    shadowClass   = 'shadow-[0_0_16px_rgba(124,58,237,0.60)]';
+    shadowClass   = 'shadow-[0_0_12px_var(--violet-dim)]';
     transformClass = 'translate-y-[2px]';
   }
 
@@ -229,11 +229,11 @@ const LiveKeyboard = React.memo(function LiveKeyboard({
       {/* Legend (lesson mode only) */}
       {mode === 'lesson' && allowedKeys.length > 0 && (
         <div className="flex items-center gap-3 mt-2 px-1 justify-end">
-          <span className="flex items-center gap-1.5 text-[9px] font-mono text-[#3d3d5c]">
-            <span className="w-2 h-2 rounded-sm border border-violet/40 bg-[#1e1535]" />
+          <span className="flex items-center gap-1.5 text-[9px] font-mono text-untyped">
+            <span className="w-2 h-2 rounded-sm border border-violet/40 bg-violet/10" />
             allowed key
           </span>
-          <span className="flex items-center gap-1.5 text-[9px] font-mono text-[#3d3d5c]">
+          <span className="flex items-center gap-1.5 text-[9px] font-mono text-untyped">
             <span className="w-2 h-2 rounded-sm bg-violet" />
             pressed
           </span>

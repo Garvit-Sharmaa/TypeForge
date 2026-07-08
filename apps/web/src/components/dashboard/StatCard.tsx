@@ -142,6 +142,8 @@ const XP_THRESHOLDS: Record<UserRank, [number, number]> = {
 export function XpBar({ xp, rank }: { xp: number; rank: UserRank }) {
   const [min, max] = XP_THRESHOLDS[rank] ?? [0, 1000];
   const pct = rank === 'legend' ? 100 : Math.min(100, Math.round(((xp - min) / (max - min)) * 100));
+  const trackBg = RANK_GRADIENTS[rank] || 'var(--violet)';
+  const trackShadow = RANK_SHADOWS[rank] || '0 0 12px var(--violet-dim)';
 
   return (
     <div className="flex flex-col gap-3">
@@ -155,7 +157,7 @@ export function XpBar({ xp, rank }: { xp: number; rank: UserRank }) {
 
       {/* Polished track */}
       <div className="relative h-2 w-full rounded-full overflow-hidden
-                      bg-slate-100 dark:bg-white/[0.06]
+                      bg-surface-2 dark:bg-white/[0.06]
                       shadow-[inset_0_1px_2px_rgba(0,0,0,0.12)]
                       dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]">
         {/* Metallic fill */}
@@ -163,8 +165,8 @@ export function XpBar({ xp, rank }: { xp: number; rank: UserRank }) {
           className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
           style={{
             width:      `${pct}%`,
-            background: RANK_GRADIENTS[rank],
-            boxShadow:  RANK_SHADOWS[rank],
+            background: trackBg,
+            boxShadow:  trackShadow,
           }}
         />
         {/* Inner shine streak */}
@@ -184,7 +186,7 @@ export function XpBar({ xp, rank }: { xp: number; rank: UserRank }) {
             {pct}% complete
           </span>
           <span className="text-[10px] font-mono text-slate-400 dark:text-slate-600">
-            {(max - xp).toLocaleString()} XP → {RANK_NEXT[rank]}
+            {(max - xp).toLocaleString()} XP → {RANK_NEXT[rank] || 'Next'}
           </span>
         </div>
       )}
