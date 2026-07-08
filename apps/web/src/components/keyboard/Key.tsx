@@ -8,25 +8,13 @@ import {
 import { FINGER_COLORS } from '@typing-master/shared';
 import type { KeyDefinition } from '@typing-master/shared';
 
-// ── Subtle dark finger tints for idle keys ────────────────────────────────────
-const FINGER_FILL_DARK: Record<string, string> = {
-  'left-pinky':   '#2a1520',
-  'left-ring':    '#251a0d',
-  'left-middle':  '#25230d',
-  'left-index':   '#0d2010',
-  'left-thumb':   '#0d1825',
-  'right-thumb':  '#0d1825',
-  'right-index':  '#0d2010',
-  'right-middle': '#25230d',
-  'right-ring':   '#251a0d',
-  'right-pinky':  '#2a1520',
-};
+// No hardcoded finger dark tints anymore. The finger color will be indicated by the bottom bar.
 
 // ── Priority fill colours (live typing mode) ──────────────────────────────────
 const PRIORITY_FILL = {
-  target:    '#2a1f4a',
-  pressed:   '#3d2d6e',
-  incorrect: '#3a1010',
+  target:    'var(--violet-dim)', // Uses the theme's dim violet
+  pressed:   'var(--violet)',     // Uses the theme's solid violet
+  incorrect: 'var(--incorrect)',
 };
 
 // ── Color scale helpers ───────────────────────────────────────────────────────
@@ -164,20 +152,20 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
     if (priority === 'pressed')   return PRIORITY_FILL.pressed;
     if (priority === 'target')    return PRIORITY_FILL.target;
 
-    return showFingerColors ? FINGER_FILL_DARK[finger] : undefined;
+    return undefined; // Let Tailwind classes handle idle state
   })();
 
   // Stroke colours
   let strokeColor: string | undefined = undefined;
   let strokeClassName = "";
   
-  if (priority === 'incorrect') strokeColor = '#f87171';
-  else if (priority === 'target') strokeColor = '#7c3aed';
-  else if (priority === 'pressed') strokeColor = '#a78bfa';
-  else if (heatmapEnabled) strokeColor = 'rgba(255,255,255,0.04)';
+  if (priority === 'incorrect') strokeColor = 'var(--incorrect)';
+  else if (priority === 'target') strokeColor = 'var(--violet)';
+  else if (priority === 'pressed') strokeColor = 'var(--violet)';
+  else if (heatmapEnabled) strokeColor = 'rgba(0,0,0,0.1)';
   else {
     // Idle state - use Tailwind classes
-    strokeClassName = "stroke-slate-200 dark:stroke-white/5";
+    strokeClassName = "stroke-surface-3 dark:stroke-surface-2";
   }
 
   const strokeWidth = priority === 'target' ? 1.5 : 1;
@@ -188,16 +176,15 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
   if (heatmapEnabled && kd) {
     labelColor = getContrastColor(dynamicFill);
   } else if (priority === 'incorrect') {
-    labelColor = '#f87171';
+    labelColor = '#FFFFFF';
   } else if (heatmapEnabled) {
-    labelColor = '#9090b0';
+    labelColor = 'var(--untyped)';
   } else if (priority === 'idle') {
-    // Tailwind dynamic text colors for Light/Dark mode
     labelClassName = isModifier 
-      ? "fill-slate-500 dark:fill-[#5a5a7a]" 
-      : "fill-slate-700 dark:fill-slate-300";
+      ? "fill-untyped" 
+      : "fill-correct";
   } else {
-    labelColor = '#e2e8f0'; // target/pressed
+    labelColor = '#FFFFFF'; // target/pressed
   }
 
   const fontSize = width > 80 ? 10 : width > 60 ? 11 : 12;
@@ -238,7 +225,7 @@ export const Key = React.memo(function Key({ keyDef }: KeyProps) {
           className={
             dynamicFill 
               ? strokeClassName 
-              : `fill-white drop-shadow-sm hover:fill-slate-50 dark:fill-[#161f30] dark:hover:fill-[#1e293b] ${strokeClassName}`
+              : `fill-surface-1 drop-shadow-sm hover:fill-surface-2 ${strokeClassName}`
           }
           animate={{ fill: dynamicFill || "" }}
           transition={{ duration: isHeatmapStatic ? 0.35 : 0.09 }}

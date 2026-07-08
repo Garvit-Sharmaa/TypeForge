@@ -70,20 +70,20 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
       <button
         id="kbd-toggle-heatmap"
         onClick={toggleHeatmap}
-        className={`text-[10px] font-mono px-2 py-1 rounded-md border transition-colors
+        className={`text-[10px] font-mono px-2 py-1 rounded border transition-colors
           ${heatmapEnabled
-            ? 'border-violet/50 text-violet-light bg-violet/10'
-            : 'border-surface-3 text-untyped hover:border-violet/30'}`}
+            ? 'border-violet text-violet bg-violet/10'
+            : 'border-surface-3 text-untyped hover:border-violet/50 hover:text-violet'}`}
       >
         {heatmapEnabled ? '● heatmap on' : '○ heatmap'}
       </button>
       <button
         id="kbd-toggle-fingers"
         onClick={toggleFingerColors}
-        className={`text-[10px] font-mono px-2 py-1 rounded-md border transition-colors
+        className={`text-[10px] font-mono px-2 py-1 rounded border transition-colors
           ${showFingerColors
-            ? 'border-surface-3 text-violet-light bg-violet/10'
-            : 'border-surface-3 text-untyped hover:border-violet/30'}`}
+            ? 'border-violet text-violet bg-violet/10'
+            : 'border-surface-3 text-untyped hover:border-violet/50 hover:text-violet'}`}
       >
         {showFingerColors ? '● fingers on' : '○ fingers'}
       </button>
@@ -93,7 +93,7 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
   return (
     <div
       ref={wrapperRef}
-      className={`rounded-xl p-2 bg-slate-100/50 border border-slate-200 dark:bg-slate-900/50 dark:border-white/5 ${className ?? ''}`}
+      className={`rounded-xl p-2 bg-surface-0 border border-surface-2 shadow-sm ${className ?? ''}`}
       style={{ position: 'relative' }}
       onMouseMove={heatmapEnabled ? handleMouseMove : undefined}
     >
@@ -124,10 +124,10 @@ export function Keyboard({ className, layout: layoutProp, controlsSlot }: Keyboa
             pointerEvents: 'none',
             zIndex:        100,
           }}
-          className="glass rounded-xl px-3 py-2 text-xs font-mono
-                     border border-violet/20 shadow-lg"
+          className="bg-surface-1 rounded-xl px-3 py-2 text-xs font-mono
+                     border border-surface-3 shadow-lg text-correct"
         >
-          <div className="font-bold mb-1" style={{ color: '#e2e8f0' }}>
+          <div className="font-bold mb-1 text-violet">
             {hoveredDef?.display ?? hoveredKeyId}
           </div>
           {hoveredKd ? (
