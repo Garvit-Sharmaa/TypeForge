@@ -57,7 +57,15 @@ export function useAuth() {
 
   // ── Hydrate from persisted store on mount ─────────────────────────────────
   useEffect(() => {
-    if (!isHydrated || !tokens?.refreshToken) return;
+    if (!isHydrated) return;
+
+    if (!tokens?.refreshToken) {
+      // User is completely logged out in local state (e.g. localStorage cleared).
+      // CRITICAL: Ensure the cookie is wiped so middleware doesn't trap them in a redirect loop!
+      document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; Secure';
+      return;
+    }
+
     // Validate the stored refresh token by refreshing immediately
     authApi.refresh(tokens.refreshToken)
       .then((newTokens) => {
