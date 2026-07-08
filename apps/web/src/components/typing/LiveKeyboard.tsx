@@ -89,6 +89,52 @@ export interface LiveKeyboardProps {
   allowedKeys: string[];
 }
 
+// ── Finger Mapping ────────────────────────────────────────────────────────────
+// Maps each key to the standard touch-typing finger color.
+const FINGER_MAP: Record<string, string> = {
+  // Pinky (Rose)
+  '`': 'rose', '1': 'rose', 'q': 'rose', 'a': 'rose', 'z': 'rose',
+  'tab': 'rose', 'capslock': 'rose', 'shift': 'rose', 'control': 'rose',
+  '0': 'rose', '-': 'rose', '=': 'rose', 'p': 'rose', '[': 'rose', ']': 'rose', '\\': 'rose',
+  ';': 'rose', "'": 'rose', 'enter': 'rose', '/': 'rose', 'backspace': 'rose',
+  // Ring (Amber)
+  '2': 'amber', 'w': 'amber', 's': 'amber', 'x': 'amber',
+  '9': 'amber', 'o': 'amber', 'l': 'amber', '.': 'amber',
+  // Middle (Emerald)
+  '3': 'emerald', 'e': 'emerald', 'd': 'emerald', 'c': 'emerald',
+  '8': 'emerald', 'i': 'emerald', 'k': 'emerald', ',': 'emerald',
+  // Index (Sky)
+  '4': 'sky', '5': 'sky', 'r': 'sky', 't': 'sky', 'f': 'sky', 'g': 'sky', 'v': 'sky', 'b': 'sky',
+  '6': 'sky', '7': 'sky', 'y': 'sky', 'u': 'sky', 'h': 'sky', 'j': 'sky', 'n': 'sky', 'm': 'sky',
+  // Thumbs (Violet)
+  ' ': 'violet', 'alt': 'violet',
+};
+
+// ── Color Theme Classes ───────────────────────────────────────────────────────
+// Explicit Tailwind classes for each finger color to ensure they are not purged.
+const COLOR_CLASSES: Record<string, { bgAllowed: string, borderAllowed: string, textAllowed: string, bgPressed: string, borderPressed: string, shadowPressed: string, dot: string }> = {
+  rose: {
+    bgAllowed: 'bg-rose-500/20 dark:bg-rose-500/10', borderAllowed: 'border-rose-500/50', textAllowed: 'text-rose-600 dark:text-rose-400',
+    bgPressed: 'bg-rose-500', borderPressed: 'border-rose-400', shadowPressed: 'shadow-[0_0_12px_rgba(244,63,94,0.6)]', dot: 'bg-rose-500',
+  },
+  amber: {
+    bgAllowed: 'bg-amber-500/20 dark:bg-amber-500/10', borderAllowed: 'border-amber-500/50', textAllowed: 'text-amber-600 dark:text-amber-400',
+    bgPressed: 'bg-amber-500', borderPressed: 'border-amber-400', shadowPressed: 'shadow-[0_0_12px_rgba(245,158,11,0.6)]', dot: 'bg-amber-500',
+  },
+  emerald: {
+    bgAllowed: 'bg-emerald-500/20 dark:bg-emerald-500/10', borderAllowed: 'border-emerald-500/50', textAllowed: 'text-emerald-700 dark:text-emerald-400',
+    bgPressed: 'bg-emerald-500', borderPressed: 'border-emerald-400', shadowPressed: 'shadow-[0_0_12px_rgba(16,185,129,0.6)]', dot: 'bg-emerald-500',
+  },
+  sky: {
+    bgAllowed: 'bg-sky-500/20 dark:bg-sky-500/10', borderAllowed: 'border-sky-500/50', textAllowed: 'text-sky-600 dark:text-sky-400',
+    bgPressed: 'bg-sky-500', borderPressed: 'border-sky-400', shadowPressed: 'shadow-[0_0_12px_rgba(14,165,233,0.6)]', dot: 'bg-sky-500',
+  },
+  violet: {
+    bgAllowed: 'bg-violet-500/20 dark:bg-violet-500/10', borderAllowed: 'border-violet-500/50', textAllowed: 'text-violet-600 dark:text-violet-400',
+    bgPressed: 'bg-violet-500', borderPressed: 'border-violet-400', shadowPressed: 'shadow-[0_0_12px_rgba(139,92,246,0.6)]', dot: 'bg-violet-500',
+  },
+};
+
 // ── Individual key cap ────────────────────────────────────────────────────────
 
 interface KeyCapProps {
@@ -99,6 +145,8 @@ interface KeyCapProps {
 
 const KeyCap = React.memo(function KeyCap({ keyDef, isAllowed, isPressed }: KeyCapProps) {
   // ── Visual state resolution (priority: pressed > allowed > default) ─────────
+  const fingerColor = FINGER_MAP[keyDef.char] || 'violet';
+  const colors = COLOR_CLASSES[fingerColor]!;
 
   let bgClass      = 'bg-surface-1';
   let borderClass  = 'border-surface-2';
@@ -107,19 +155,19 @@ const KeyCap = React.memo(function KeyCap({ keyDef, isAllowed, isPressed }: KeyC
   let transformClass = '';
 
   if (isAllowed && !isPressed) {
-    // TARGET/ALLOWED — soft violet tint, brighter label, glowing border
-    bgClass     = 'bg-violet/10';
-    borderClass = 'border-violet/40';
-    textClass   = 'text-violet dark:text-violet-light';
+    // TARGET/ALLOWED — finger color tint, brighter label, glowing border
+    bgClass     = colors.bgAllowed;
+    borderClass = colors.borderAllowed;
+    textClass   = colors.textAllowed;
     shadowClass = '';
   }
 
   if (isPressed) {
-    // PRESSED — full depress flash: translate down, bright violet bg, white text
-    bgClass       = 'bg-violet';
-    borderClass   = 'border-violet-light';
+    // PRESSED — full depress flash: translate down, bright bg, white text
+    bgClass       = colors.bgPressed;
+    borderClass   = colors.borderPressed;
     textClass     = 'text-white';
-    shadowClass   = 'shadow-[0_0_12px_var(--violet-dim)]';
+    shadowClass   = colors.shadowPressed;
     transformClass = 'translate-y-[2px]';
   }
 
@@ -150,17 +198,15 @@ const KeyCap = React.memo(function KeyCap({ keyDef, isAllowed, isPressed }: KeyC
       {/* Pressed: bottom-edge light strip (depth illusion) */}
       {isPressed && (
         <span
-          className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full
-                     bg-violet-light/60"
+          className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full bg-white/30"
           style={{ pointerEvents: 'none' }}
         />
       )}
 
-      {/* Allowed (not pressed): tiny violet dot at bottom edge */}
+      {/* Allowed (not pressed): tiny colored dot at bottom edge */}
       {isAllowed && !isPressed && (
         <span
-          className="absolute bottom-[3px] left-1/2 -translate-x-1/2
-                     w-1 h-1 rounded-full bg-violet/50"
+          className={`absolute bottom-[3px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${colors.dot} opacity-50`}
           style={{ pointerEvents: 'none' }}
         />
       )}
@@ -228,13 +274,19 @@ const LiveKeyboard = React.memo(function LiveKeyboard({
 
       {/* Legend (lesson mode only) */}
       {mode === 'lesson' && allowedKeys.length > 0 && (
-        <div className="flex items-center gap-3 mt-2 px-1 justify-end">
+        <div className="flex items-center gap-4 mt-2 px-1 justify-end">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            </div>
+            <span className="text-[9px] font-mono text-untyped">finger zones</span>
+          </div>
           <span className="flex items-center gap-1.5 text-[9px] font-mono text-untyped">
-            <span className="w-2 h-2 rounded-sm border border-violet/40 bg-violet/10" />
-            allowed key
-          </span>
-          <span className="flex items-center gap-1.5 text-[9px] font-mono text-untyped">
-            <span className="w-2 h-2 rounded-sm bg-violet" />
+            <span className="w-2 h-2 rounded-sm bg-surface-4 border border-surface-3" />
             pressed
           </span>
         </div>
